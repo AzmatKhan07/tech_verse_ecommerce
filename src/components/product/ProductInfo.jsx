@@ -1,15 +1,16 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Star, Heart, Minus, Plus } from "lucide-react";
 
 /**
  * ProductInfo Component
- * Displays product information, pricing, options, and action buttons
+ * Displays product information, pricing, options, and action buttons with dynamic countdown timer
  */
 const ProductInfo = ({ product }) => {
   const [selectedColor, setSelectedColor] = useState(0);
   const [quantity, setQuantity] = useState(1);
+  const [timeLeft, setTimeLeft] = useState(null);
 
   const {
     name = "Tray Table",
@@ -92,6 +93,49 @@ const ProductInfo = ({ product }) => {
     }
   };
 
+  // Initialize and manage countdown timer
+  useEffect(() => {
+    // Calculate target end time (e.g., 2 days, 12 hours, 45 minutes, 5 seconds from now)
+    // You can modify this to use a specific end date from your product data
+    const now = new Date().getTime();
+    const targetTime =
+      now +
+      offerTimer.days * 24 * 60 * 60 * 1000 +
+      offerTimer.hours * 60 * 60 * 1000 +
+      offerTimer.minutes * 60 * 1000 +
+      offerTimer.seconds * 1000;
+
+    const updateTimer = () => {
+      const currentTime = new Date().getTime();
+      const timeDifference = targetTime - currentTime;
+
+      if (timeDifference > 0) {
+        const days = Math.floor(timeDifference / (1000 * 60 * 60 * 24));
+        const hours = Math.floor(
+          (timeDifference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+        );
+        const minutes = Math.floor(
+          (timeDifference % (1000 * 60 * 60)) / (1000 * 60)
+        );
+        const seconds = Math.floor((timeDifference % (1000 * 60)) / 1000);
+
+        setTimeLeft({ days, hours, minutes, seconds });
+      } else {
+        // Timer has ended
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+      }
+    };
+
+    // Update immediately
+    updateTimer();
+
+    // Set up interval to update every second
+    const timer = setInterval(updateTimer, 1000);
+
+    // Cleanup interval on component unmount
+    return () => clearInterval(timer);
+  }, [offerTimer]);
+
   return (
     <div className="space-y-6">
       {/* Product Title */}
@@ -122,35 +166,54 @@ const ProductInfo = ({ product }) => {
         )}
       </div>
 
-      {/* Offer Timer */}
-      <div className="p-4 rounded-lg">
+      {/* Dynamic Offer Timer */}
+      <div className="p-4 rounded-lg border-b border-gray-200">
         <p className="text-sm text-gray-600 mb-2">Offer ends in:</p>
-        <div className="flex items-center gap-2 text-lg font-semibold">
-          <div className="text-center">
-            <span className="bg-gray-100 text-black px-2 py-1 rounded text-5xl w-24 h-24 flex items-center justify-center">
-              {offerTimer.days.toString().padStart(2, "0")}
-            </span>
-            <span className="text-gray-600">Days</span>
+        {timeLeft ? (
+          <div className="flex items-center gap-2 text-lg font-semibold">
+            <div className="text-center">
+              <span className="bg-gray-100 text-black px-2 py-1 rounded text-5xl w-24 h-24 flex items-center justify-center">
+                {timeLeft.days.toString().padStart(2, "0")}
+              </span>
+              <span className="text-gray-600">Days</span>
+            </div>
+            <div className="text-center">
+              <span className="bg-gray-100 text-black px-2 py-1 rounded text-5xl w-24 h-24 flex items-center justify-center">
+                {timeLeft.hours.toString().padStart(2, "0")}
+              </span>
+              <span className="text-gray-600">Hours</span>
+            </div>
+            <div className="text-center">
+              <span className="bg-gray-100 text-black px-2 py-1 rounded text-5xl w-24 h-24 flex items-center justify-center">
+                {timeLeft.minutes.toString().padStart(2, "0")}
+              </span>
+              <span className="text-gray-600">Minutes</span>
+            </div>
+            <div className="text-center">
+              <span className="bg-gray-100 text-black px-2 py-1 rounded text-5xl w-24 h-24 flex items-center justify-center">
+                {timeLeft.seconds.toString().padStart(2, "0")}
+              </span>
+              <span className="text-gray-600">Seconds</span>
+            </div>
           </div>
-          <div className="text-center">
-            <span className="bg-gray-100 text-black px-2 py-1 rounded text-5xl w-24 h-24 flex items-center justify-center">
-              {offerTimer.hours.toString().padStart(2, "0")}
-            </span>
-            <span className="text-gray-600">Hours</span>
+        ) : (
+          <div className="text-center py-4">
+            <span className="text-gray-500">Loading timer...</span>
           </div>
-          <div className="text-center">
-            <span className="bg-gray-100 text-black px-2 py-1 rounded text-5xl w-24 h-24 flex items-center justify-center">
-              {offerTimer.minutes.toString().padStart(2, "0")}
-            </span>
-            <span className="text-gray-600">Minutes</span>
-          </div>
-          <div className="text-center">
-            <span className="bg-gray-100 text-black px-2 py-1 rounded text-5xl w-24 h-24 flex items-center justify-center">
-              {offerTimer.seconds.toString().padStart(2, "0")}
-            </span>
-            <span className="text-gray-600">Seconds</span>
-          </div>
-        </div>
+        )}
+
+        {/* Show expired message when timer reaches zero */}
+        {timeLeft &&
+          timeLeft.days === 0 &&
+          timeLeft.hours === 0 &&
+          timeLeft.minutes === 0 &&
+          timeLeft.seconds === 0 && (
+            <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-center">
+              <span className="text-red-600 font-semibold">
+                🔥 Offer Expired!
+              </span>
+            </div>
+          )}
       </div>
 
       {/* Measurements */}
@@ -166,7 +229,7 @@ const ProductInfo = ({ product }) => {
       {/* Color Selection */}
       <div>
         <div className="flex flex-col items-start justify-between mb-5">
-          <span className="text-sm font-medium">Choose Color:</span>
+          <span className="text-sm font-medium">Choose Color :</span>
           <span className="text-lg font-bold mt-2">
             {colors[selectedColor].name}
           </span>

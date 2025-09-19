@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Star, ShoppingCartIcon } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 /**
  * ProductCard Component
@@ -21,6 +22,8 @@ import { Star, ShoppingCartIcon } from "lucide-react";
  * @param {string} className - Additional CSS classes
  */
 const ProductCard = ({ product, className = "" }) => {
+  const navigate = useNavigate();
+
   const {
     id,
     name,
@@ -112,7 +115,12 @@ const ProductCard = ({ product, className = "" }) => {
           <div className="flex items-center gap-1">{renderStars()}</div>
 
           {/* Product Name */}
-          <h3 className="font-medium text-gray-900 text-sm leading-tight line-clamp-2">
+          <h3
+            className="font-medium text-gray-900 text-sm leading-tight line-clamp-2"
+            onClick={() => {
+              navigate(`/product-details/${id}`);
+            }}
+          >
             {name}
           </h3>
 

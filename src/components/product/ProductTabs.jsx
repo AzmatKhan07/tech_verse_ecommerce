@@ -1,5 +1,13 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { MessageSquare, ThumbsUp } from "lucide-react";
 
 /**
  * ProductTabs Component
@@ -128,12 +136,17 @@ const ProductTabs = ({ product, reviews }) => {
                 ({reviews?.length || 0} reviews)
               </span>
             </div>
-            <select className="border border-gray-300 rounded-md px-3 py-2 text-sm">
-              <option>Newest</option>
-              <option>Oldest</option>
-              <option>Highest Rating</option>
-              <option>Lowest Rating</option>
-            </select>
+            <Select defaultValue="newest">
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Sort reviews" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest">Newest</SelectItem>
+                <SelectItem value="oldest">Oldest</SelectItem>
+                <SelectItem value="highest">Highest Rating</SelectItem>
+                <SelectItem value="lowest">Lowest Rating</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Review Input */}
@@ -151,13 +164,15 @@ const ProductTabs = ({ product, reviews }) => {
                 ))}
               </div>
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-3 border border-gray-300 rounded-full px-3 py-2 text-sm">
               <input
                 type="text"
                 placeholder="Write your review..."
-                className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm"
+                className="flex-1 outline-0 pl-3"
               />
-              <Button size="sm">Write Review</Button>
+              <Button size="lg" className="rounded-full">
+                Write Review
+              </Button>
             </div>
           </div>
 
@@ -172,16 +187,14 @@ const ProductTabs = ({ product, reviews }) => {
                     className="w-12 h-12 rounded-full object-cover"
                   />
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex flex-col  mb-2">
                       <h5 className="font-medium">{review.name}</h5>
-                      <div className="flex gap-1">
+                      <div className="flex">
                         {Array.from({ length: 5 }, (_, i) => (
                           <span
                             key={i}
-                            className={`w-4 h-4 ${
-                              i < review.rating
-                                ? "text-yellow-400"
-                                : "text-gray-300"
+                            className={`w-5 h-5 ${
+                              i < review.rating ? "text-black" : "text-gray-300"
                             }`}
                           >
                             ★
@@ -193,12 +206,23 @@ const ProductTabs = ({ product, reviews }) => {
                       {review.text}
                     </p>
                     <div className="flex gap-4 mt-3">
-                      <button className="text-sm text-gray-600 hover:text-black">
+                      <Button
+                        variant={"outline"}
+                        className={
+                          "rounded-full hover:bg-blue-500 hover:text-white transition-all duration-300 cursor-pointer"
+                        }
+                      >
+                        <ThumbsUp />
                         Like
-                      </button>
-                      <button className="text-sm text-gray-600 hover:text-black">
-                        Reply
-                      </button>
+                      </Button>
+                      <Button
+                        variant={"outline"}
+                        className={
+                          "rounded-full hover:bg-yellow-500 hover:text-white transition-all duration-300 cursor-pointer"
+                        }
+                      >
+                        <MessageSquare /> Reply
+                      </Button>
                     </div>
                   </div>
                 </div>
