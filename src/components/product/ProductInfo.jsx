@@ -1,0 +1,256 @@
+import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Star, Heart, Minus, Plus } from "lucide-react";
+
+/**
+ * ProductInfo Component
+ * Displays product information, pricing, options, and action buttons
+ */
+const ProductInfo = ({ product }) => {
+  const [selectedColor, setSelectedColor] = useState(0);
+  const [quantity, setQuantity] = useState(1);
+
+  const {
+    name = "Tray Table",
+    rating = 5,
+    reviewCount = 11,
+    description = "Buy one or buy a few and make every space where you sit more convenient. Light and easy to move around with removable tray top, handy for serving snacks.",
+    price = 199.0,
+    originalPrice = 400.0,
+    offerTimer = { days: 2, hours: 12, minutes: 45, seconds: 5 },
+    measurements = '17 1/2×20 5/8"',
+    colors = [
+      {
+        name: "Black",
+        value: "black",
+        image:
+          "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=100&h=100&fit=crop&auto=format",
+      },
+      {
+        name: "Beige",
+        value: "beige",
+        image:
+          "https://images.unsplash.com/photo-1506439773649-6e0eb8cfb237?w=100&h=100&fit=crop&auto=format",
+      },
+      {
+        name: "Red",
+        value: "red",
+        image:
+          "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=100&h=100&fit=crop&auto=format",
+      },
+      {
+        name: "White",
+        value: "white",
+        image:
+          "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=100&h=100&fit=crop&auto=format",
+      },
+    ],
+    sku = "1117",
+    category = "Living Room, Bedroom",
+  } = product;
+
+  // Format price to currency
+  const formatPrice = (amount) => {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      minimumFractionDigits: 2,
+    }).format(amount);
+  };
+
+  // Generate star rating
+  const renderStars = () => {
+    return Array.from({ length: 5 }, (_, index) => (
+      <Star
+        key={index}
+        className={`w-4 h-4 ${
+          index < rating
+            ? "fill-black text-black"
+            : "fill-gray-200 text-gray-200"
+        }`}
+      />
+    ));
+  };
+
+  const handleAddToCart = () => {
+    console.log(
+      `Adding ${quantity} ${name} in ${colors[selectedColor].name} to cart`
+    );
+    // TODO: Implement add to cart functionality
+  };
+
+  const handleAddToWishlist = () => {
+    console.log(`Adding ${name} to wishlist`);
+    // TODO: Implement wishlist functionality
+  };
+
+  const handleQuantityChange = (change) => {
+    const newQuantity = quantity + change;
+    if (newQuantity >= 1) {
+      setQuantity(newQuantity);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Product Title */}
+      <div>
+        <h1 className="text-3xl lg:text-4xl font-bold text-black mb-3">
+          {name}
+        </h1>
+
+        {/* Rating */}
+        <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center gap-1">{renderStars()}</div>
+          <span className="text-sm text-gray-600">({reviewCount} Reviews)</span>
+        </div>
+
+        {/* Description */}
+        <p className="text-gray-700 leading-relaxed">{description}</p>
+      </div>
+
+      {/* Price */}
+      <div className="flex items-center gap-3">
+        <span className="text-3xl font-bold text-black">
+          {formatPrice(price)}
+        </span>
+        {originalPrice > price && (
+          <span className="text-xl text-gray-500 line-through">
+            {formatPrice(originalPrice)}
+          </span>
+        )}
+      </div>
+
+      {/* Offer Timer */}
+      <div className="p-4 rounded-lg">
+        <p className="text-sm text-gray-600 mb-2">Offer ends in:</p>
+        <div className="flex items-center gap-2 text-lg font-semibold">
+          <div className="text-center">
+            <span className="bg-gray-100 text-black px-2 py-1 rounded text-5xl w-24 h-24 flex items-center justify-center">
+              {offerTimer.days.toString().padStart(2, "0")}
+            </span>
+            <span className="text-gray-600">Days</span>
+          </div>
+          <div className="text-center">
+            <span className="bg-gray-100 text-black px-2 py-1 rounded text-5xl w-24 h-24 flex items-center justify-center">
+              {offerTimer.hours.toString().padStart(2, "0")}
+            </span>
+            <span className="text-gray-600">Hours</span>
+          </div>
+          <div className="text-center">
+            <span className="bg-gray-100 text-black px-2 py-1 rounded text-5xl w-24 h-24 flex items-center justify-center">
+              {offerTimer.minutes.toString().padStart(2, "0")}
+            </span>
+            <span className="text-gray-600">Minutes</span>
+          </div>
+          <div className="text-center">
+            <span className="bg-gray-100 text-black px-2 py-1 rounded text-5xl w-24 h-24 flex items-center justify-center">
+              {offerTimer.seconds.toString().padStart(2, "0")}
+            </span>
+            <span className="text-gray-600">Seconds</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Measurements */}
+      <div>
+        <div className="">
+          <p className="">Dimensions:</p>
+          <span className="text-gray-600 text-lg font-bold">
+            {measurements}
+          </span>
+        </div>
+      </div>
+
+      {/* Color Selection */}
+      <div>
+        <div className="flex flex-col items-start justify-between mb-5">
+          <span className="text-sm font-medium">Choose Color:</span>
+          <span className="text-lg font-bold mt-2">
+            {colors[selectedColor].name}
+          </span>
+        </div>
+        <div className="flex gap-3">
+          {colors.map((color, index) => (
+            <button
+              key={index}
+              onClick={() => setSelectedColor(index)}
+              className={`w-12 h-12 rounded-lg overflow-hidden border-2 transition-all duration-200 ${
+                selectedColor === index
+                  ? "border-black ring-2 ring-black ring-offset-2"
+                  : "border-gray-200 hover:border-gray-300"
+              }`}
+            >
+              <img
+                src={color.image}
+                alt={color.name}
+                className="w-full h-full object-cover"
+              />
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Quantity Selector */}
+      <div>
+        <span className="text-sm font-medium mb-3 block">Quantity:</span>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => handleQuantityChange(-1)}
+            disabled={quantity <= 1}
+            className="w-10 h-10"
+          >
+            <Minus className="w-4 h-4" />
+          </Button>
+          <span className="text-lg font-medium w-12 text-center">
+            {quantity}
+          </span>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => handleQuantityChange(1)}
+            className="w-10 h-10"
+          >
+            <Plus className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex gap-4">
+        <Button
+          onClick={handleAddToCart}
+          className="flex-1 bg-black text-white hover:bg-gray-800 py-3 text-lg font-medium"
+        >
+          Add to Cart
+        </Button>
+        <Button
+          variant="outline"
+          onClick={handleAddToWishlist}
+          className="px-6 border-black text-black hover:bg-gray-50"
+        >
+          <Heart className="w-5 h-5" />
+        </Button>
+      </div>
+
+      {/* SKU & Category */}
+      <div className="pt-4 border-t border-gray-200">
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <span className="text-gray-600">SKU:</span>
+            <span className="ml-2 font-medium">{sku}</span>
+          </div>
+          <div>
+            <span className="text-gray-600">CATEGORY:</span>
+            <span className="ml-2 font-medium">{category}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ProductInfo;
