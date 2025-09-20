@@ -168,3 +168,7 @@ html::-webkit-scrollbar-track {
 .productContainer::-webkit-scrollbar-corner {
   background-color: #f1f1f1 !important;
 }
+
+button {
+  cursor: pointer;
+}

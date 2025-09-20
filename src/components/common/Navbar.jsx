@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import {
   Sheet,
   SheetContent,
@@ -20,16 +20,14 @@ const navLinks = [
     href: "/shop",
   },
   {
-    name: "Product",
-    href: "/product",
-  },
-  {
     name: "Contact Us",
     href: "/contact",
   },
 ];
 
 const Navbar = () => {
+  const navigate = useNavigate();
+
   return (
     <header className="bg-white border-b border-gray-100">
       <div className="container mx-auto px-4">
@@ -91,7 +89,10 @@ const Navbar = () => {
 
             {/* Shopping Bag Icon with Badge */}
             <div className="relative">
-              <button className="text-black hover:text-gray-600 transition-colors duration-200">
+              <button
+                className="text-black hover:text-gray-600 transition-colors duration-200"
+                onClick={() => navigate("/cart")}
+              >
                 <svg
                   className="w-6 h-6"
                   fill="none"
