@@ -8,6 +8,7 @@ import {
   SheetTrigger,
   SheetClose,
 } from "@/components/ui/sheet";
+import { useCart } from "@/context/CartContext";
 
 const navLinks = [
   {
@@ -27,6 +28,7 @@ const navLinks = [
 
 const Navbar = () => {
   const navigate = useNavigate();
+  const { cartItemsCount } = useCart();
 
   return (
     <header className="bg-white border-b border-gray-100">
@@ -71,7 +73,10 @@ const Navbar = () => {
             </button>
 
             {/* User Icon */}
-            <button className="text-black hover:text-gray-600 transition-colors duration-200">
+            <button
+              className="text-black hover:text-gray-600 transition-colors duration-200"
+              onClick={() => navigate("/profile")}
+            >
               <svg
                 className="w-6 h-6"
                 fill="none"
@@ -108,9 +113,11 @@ const Navbar = () => {
                 </svg>
               </button>
               {/* Badge */}
-              <span className="absolute -top-2 -right-2 bg-black text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
-                2
-              </span>
+              {cartItemsCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-black text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
+                  {cartItemsCount}
+                </span>
+              )}
             </div>
           </div>
 
@@ -118,7 +125,10 @@ const Navbar = () => {
           <div className="md:hidden flex items-center space-x-4">
             {/* Mobile Icons - Shopping Bag */}
             <div className="relative">
-              <button className="text-black hover:text-gray-600 transition-colors duration-200">
+              <button
+                className="text-black hover:text-gray-600 transition-colors duration-200"
+                onClick={() => navigate("/cart")}
+              >
                 <svg
                   className="w-6 h-6"
                   fill="none"
@@ -134,9 +144,11 @@ const Navbar = () => {
                 </svg>
               </button>
               {/* Badge */}
-              <span className="absolute -top-2 -right-2 bg-black text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
-                2
-              </span>
+              {cartItemsCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-black text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
+                  {cartItemsCount}
+                </span>
+              )}
             </div>
 
             {/* Sheet Trigger */}
@@ -283,9 +295,11 @@ const Navbar = () => {
                               d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
                             />
                           </svg>
-                          <span className="bg-black text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
-                            2
-                          </span>
+                          {cartItemsCount > 0 && (
+                            <span className="bg-black text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
+                              {cartItemsCount}
+                            </span>
+                          )}
                         </div>
                       </div>
 

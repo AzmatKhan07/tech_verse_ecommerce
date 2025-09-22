@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Star, Heart } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useCart } from "@/context/CartContext";
+import { useWishlist } from "@/context/WishlistContext";
 
 /**
  * ShopProductCard Component
@@ -11,6 +13,8 @@ import { useNavigate } from "react-router-dom";
  */
 const ShopProductCard = ({ product, className = "" }) => {
   const navigate = useNavigate();
+  const { addToCart, isInCart } = useCart();
+  const { toggleWishlist, isInWishlist } = useWishlist();
 
   const {
     id,
@@ -51,13 +55,13 @@ const ShopProductCard = ({ product, className = "" }) => {
   const handleAddToCart = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    console.log(`Adding product ${id} to cart`);
+    addToCart(product, 1);
   };
 
   const handleAddToWishlist = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    console.log(`Adding product ${id} to wishlist`);
+    toggleWishlist(product);
   };
 
   const handleCardClick = () => {
@@ -135,17 +139,29 @@ const ShopProductCard = ({ product, className = "" }) => {
             <div className="flex items-center gap-3 pt-3">
               <Button
                 onClick={handleAddToCart}
-                className="flex-1 bg-black text-white hover:bg-gray-800 py-2 text-sm font-medium"
+                className={`flex-1 py-2 text-sm font-medium ${
+                  isInCart(id)
+                    ? "bg-green-600 text-white hover:bg-green-700"
+                    : "bg-black text-white hover:bg-gray-800"
+                }`}
               >
-                Add to cart
+                {isInCart(id) ? "Added to cart" : "Add to cart"}
               </Button>
               <Button
                 variant="outline"
                 size="icon"
                 onClick={handleAddToWishlist}
-                className="border-gray-300 text-gray-600 hover:bg-gray-50"
+                className={`border-gray-300 hover:bg-gray-50 ${
+                  isInWishlist(id)
+                    ? "text-red-500 bg-red-50 border-red-200"
+                    : "text-gray-600"
+                }`}
               >
-                <Heart className="w-4 h-4" />
+                <Heart
+                  className={`w-4 h-4 ${
+                    isInWishlist(id) ? "fill-current" : ""
+                  }`}
+                />
               </Button>
             </div>
           </div>

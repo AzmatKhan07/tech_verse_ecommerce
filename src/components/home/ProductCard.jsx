@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Star, ShoppingCartIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useCart } from "@/context/CartContext";
+import { useWishlist } from "@/context/WishlistContext";
 
 /**
  * ProductCard Component
@@ -23,6 +25,8 @@ import { useNavigate } from "react-router-dom";
  */
 const ProductCard = ({ product, className = "" }) => {
   const navigate = useNavigate();
+  const { addToCart, isInCart } = useCart();
+  const { toggleWishlist, isInWishlist } = useWishlist();
 
   const {
     id,
@@ -61,8 +65,8 @@ const ProductCard = ({ product, className = "" }) => {
 
   const handleAddToCart = (e) => {
     e.preventDefault();
-    // TODO: Implement add to cart functionality
-    console.log(`Adding product ${id} to cart`);
+    e.stopPropagation();
+    addToCart(product, 1);
   };
 
   return (
@@ -102,9 +106,14 @@ const ProductCard = ({ product, className = "" }) => {
           <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
             <Button
               onClick={handleAddToCart}
-              className="bg-black text-white hover:bg-gray-800 px-6 py-2 text-sm font-medium rounded-md w-full"
+              className={`px-6 py-2 text-sm font-medium rounded-md w-full flex items-center gap-2 ${
+                isInCart(id)
+                  ? "bg-green-600 text-white hover:bg-green-700"
+                  : "bg-black text-white hover:bg-gray-800"
+              }`}
             >
-              <ShoppingCartIcon className="w-4 h-4" /> Add to cart
+              <ShoppingCartIcon className="w-4 h-4" />
+              {isInCart(id) ? "Added to cart" : "Add to cart"}
             </Button>
           </div>
         </div>

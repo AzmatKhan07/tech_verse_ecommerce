@@ -2,12 +2,14 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Star, Heart, Minus, Plus } from "lucide-react";
+import { useCart } from "@/context/CartContext";
 
 /**
  * ProductInfo Component
  * Displays product information, pricing, options, and action buttons with dynamic countdown timer
  */
 const ProductInfo = ({ product }) => {
+  const { addToCart, isInCart } = useCart();
   const [selectedColor, setSelectedColor] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [timeLeft, setTimeLeft] = useState(null);
@@ -75,10 +77,15 @@ const ProductInfo = ({ product }) => {
   };
 
   const handleAddToCart = () => {
-    console.log(
-      `Adding ${quantity} ${name} in ${colors[selectedColor].name} to cart`
-    );
-    // TODO: Implement add to cart functionality
+    // Create product object with selected options
+    const productToAdd = {
+      ...product,
+      selectedColor: colors[selectedColor],
+      color: colors[selectedColor].name,
+      image: colors[selectedColor].image || product.images?.[0]?.url,
+    };
+
+    addToCart(productToAdd, quantity);
   };
 
   const handleAddToWishlist = () => {
@@ -286,9 +293,13 @@ const ProductInfo = ({ product }) => {
       <div className="flex gap-4">
         <Button
           onClick={handleAddToCart}
-          className="flex-1 bg-black text-white hover:bg-gray-800 py-3 text-lg font-medium"
+          className={`flex-1 py-3 text-lg font-medium ${
+            isInCart(product.id)
+              ? "bg-green-600 text-white hover:bg-green-700"
+              : "bg-black text-white hover:bg-gray-800"
+          }`}
         >
-          Add to Cart
+          {isInCart(product.id) ? "Added to Cart" : "Add to Cart"}
         </Button>
         <Button
           variant="outline"

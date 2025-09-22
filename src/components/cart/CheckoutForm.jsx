@@ -10,12 +10,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CreditCard, Plus } from "lucide-react";
+import { useCart } from "@/context/CartContext";
 
 /**
  * CheckoutForm Component
  * Displays the checkout form with contact info, shipping address, and payment method
  */
 const CheckoutForm = ({ onNext, onBack }) => {
+  const { cartItems, cartTotal } = useCart();
   const [contactInfo, setContactInfo] = useState({
     firstName: "",
     lastName: "",
@@ -40,37 +42,9 @@ const CheckoutForm = ({ onNext, onBack }) => {
   });
 
   const [useDifferentBilling, setUseDifferentBilling] = useState(false);
-
-  // Sample cart items for order summary
-  const cartItems = [
-    {
-      id: "1",
-      name: "Tray Table",
-      color: "Black",
-      price: 38.0,
-      quantity: 2,
-      image:
-        "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=80&h=80&fit=crop&auto=format",
-    },
-    {
-      id: "2",
-      name: "Tray Table",
-      color: "Red",
-      price: 38.0,
-      quantity: 2,
-      image:
-        "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=80&h=80&fit=crop&auto=format",
-    },
-    {
-      id: "3",
-      name: "Table lamp",
-      color: "Gold",
-      price: 39.0,
-      quantity: 1,
-      image:
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&h=80&fit=crop&auto=format",
-    },
-  ];
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [shippingMethod, setShippingMethod] = useState("free");
 
   const formatPrice = (amount) => {
     return new Intl.NumberFormat("en-US", {
@@ -80,12 +54,34 @@ const CheckoutForm = ({ onNext, onBack }) => {
     }).format(amount);
   };
 
-  const subtotal = cartItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
-  const shipping = 0; // Free shipping
-  const total = subtotal + shipping;
+  // Calculate discount from applied coupon
+  const discount = appliedCoupon ? appliedCoupon.amount : 0;
+
+  // Calculate shipping cost
+  const shippingCost =
+    shippingMethod === "free" ? 0 : shippingMethod === "express" ? 15 : 21;
+
+  // Calculate totals using cart context
+  const subtotal = cartTotal;
+  const total = subtotal - discount + shippingCost;
+
+  // Handle coupon application
+  const handleApplyCoupon = () => {
+    if (couponCode.toLowerCase() === "jenkateMW".toLowerCase()) {
+      setAppliedCoupon({
+        code: "JenkateMW",
+        amount: 25.0,
+      });
+    } else {
+      setAppliedCoupon(null);
+    }
+  };
+
+  // Handle coupon removal
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode("");
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -398,50 +394,82 @@ const CheckoutForm = ({ onNext, onBack }) => {
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Cart Items */}
-            {cartItems.map((item) => (
-              <div key={item.id} className="flex items-center gap-3">
-                <img
-                  src={item.image}
-                  alt={item.name}
-                  className="w-16 h-16 object-cover rounded-lg bg-gray-100"
-                />
-                <div className="flex-1">
-                  <h4 className="font-medium text-sm">{item.name}</h4>
-                  <p className="text-xs text-gray-500">Color: {item.color}</p>
-                  <div className="flex items-center justify-between mt-1">
-                    <span className="text-xs border border-gray-300 px-2 py-1 rounded">
-                      {item.quantity}
-                    </span>
-                    <span className="font-medium text-sm">
-                      {formatPrice(item.price)}
-                    </span>
+            {cartItems.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <p>Your cart is empty</p>
+              </div>
+            ) : (
+              cartItems.map((item) => (
+                <div key={item.id} className="flex items-center gap-3">
+                  <img
+                    src={item.image}
+                    alt={item.name}
+                    className="w-16 h-16 object-cover rounded-lg bg-gray-100"
+                  />
+                  <div className="flex-1">
+                    <h4 className="font-medium text-sm">{item.name}</h4>
+                    <p className="text-xs text-gray-500">Color: {item.color}</p>
+                    <div className="flex items-center justify-between mt-1">
+                      <span className="text-xs border border-gray-300 px-2 py-1 rounded">
+                        {item.quantity}
+                      </span>
+                      <span className="font-medium text-sm">
+                        {formatPrice(item.price)}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
 
-            {/* Input field */}
+            {/* Coupon Input */}
             <div className="pt-4 border-t border-gray-200">
               <div className="flex gap-2">
-                <Input placeholder="Input" className="flex-1" />
-                <Button variant="outline">Apply</Button>
+                <Input
+                  placeholder="Coupon Code"
+                  value={couponCode}
+                  onChange={(e) => setCouponCode(e.target.value)}
+                  className="flex-1"
+                />
+                <Button variant="outline" onClick={handleApplyCoupon}>
+                  Apply
+                </Button>
               </div>
             </div>
 
             {/* Shipping and Total */}
             <div className="space-y-2 pt-4 border-t border-gray-200">
-              <div className="flex justify-between text-sm">
-                <span>JenkateMW</span>
-                <span className="text-green-600">-$25.00 [Remove]</span>
-              </div>
+              {/* Applied Coupon */}
+              {appliedCoupon && (
+                <div className="flex justify-between text-sm">
+                  <span>{appliedCoupon.code}</span>
+                  <span className="text-green-600">
+                    -{formatPrice(appliedCoupon.amount)}
+                    <button
+                      onClick={handleRemoveCoupon}
+                      className="ml-2 text-red-500 hover:text-red-700"
+                    >
+                      [Remove]
+                    </button>
+                  </span>
+                </div>
+              )}
+
+              {/* Shipping */}
               <div className="flex justify-between text-sm">
                 <span>Shipping</span>
-                <span>Free</span>
+                <span>
+                  {shippingCost === 0 ? "Free" : formatPrice(shippingCost)}
+                </span>
               </div>
+
+              {/* Subtotal */}
               <div className="flex justify-between text-sm">
                 <span>Subtotal</span>
                 <span className="font-medium">{formatPrice(subtotal)}</span>
               </div>
+
+              {/* Total */}
               <div className="flex justify-between text-lg font-medium pt-2 border-t border-gray-200">
                 <span>Total</span>
                 <span>{formatPrice(total)}</span>

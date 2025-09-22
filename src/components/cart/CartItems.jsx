@@ -3,57 +3,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Minus, Plus, X, Tag } from "lucide-react";
+import { useCart } from "@/context/CartContext";
+import { useNavigate } from "react-router-dom";
 
 /**
  * CartItems Component
  * Displays the shopping cart with items, quantities, and cart summary
  */
 const CartItems = ({ onNext }) => {
-  const [cartItems, setCartItems] = useState([
-    {
-      id: "1",
-      name: "Tray Table",
-      color: "Black",
-      price: 19.0,
-      quantity: 2,
-      image:
-        "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=100&h=100&fit=crop&auto=format",
-    },
-    {
-      id: "2",
-      name: "Tray Table",
-      color: "Red",
-      price: 19.0,
-      quantity: 2,
-      image:
-        "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=100&h=100&fit=crop&auto=format",
-    },
-    {
-      id: "3",
-      name: "Table lamp",
-      color: "Gold",
-      price: 39.0,
-      quantity: 1,
-      image:
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&auto=format",
-    },
-  ]);
+  const navigate = useNavigate();
+  const { cartItems, cartTotal, updateQuantity, removeFromCart } = useCart();
 
   const [couponCode, setCouponCode] = useState("");
   const [shippingMethod, setShippingMethod] = useState("free");
-
-  const updateQuantity = (id, newQuantity) => {
-    if (newQuantity < 1) return;
-    setCartItems((items) =>
-      items.map((item) =>
-        item.id === id ? { ...item, quantity: newQuantity } : item
-      )
-    );
-  };
-
-  const removeItem = (id) => {
-    setCartItems((items) => items.filter((item) => item.id !== id));
-  };
 
   const applyCoupon = () => {
     console.log("Applying coupon:", couponCode);
@@ -68,13 +30,49 @@ const CartItems = ({ onNext }) => {
     }).format(amount);
   };
 
-  const subtotal = cartItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
+  const subtotal = cartTotal;
   const shippingCost =
     shippingMethod === "free" ? 0 : shippingMethod === "express" ? 15 : 21;
   const total = subtotal + shippingCost;
+
+  // Handle empty cart
+  if (cartItems.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <div className="max-w-md mx-auto">
+          <div className="mb-6">
+            <div className="w-24 h-24 mx-auto bg-gray-100 rounded-full flex items-center justify-center">
+              <svg
+                className="w-12 h-12 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+                />
+              </svg>
+            </div>
+          </div>
+          <h3 className="text-xl font-medium text-gray-900 mb-2">
+            Your cart is empty
+          </h3>
+          <p className="text-gray-600 mb-6">
+            Looks like you haven't added any items to your cart yet.
+          </p>
+          <Button
+            onClick={() => navigate("/shop")}
+            className="bg-black text-white hover:bg-gray-800"
+          >
+            Continue Shopping
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="grid lg:grid-cols-3 gap-8">
@@ -105,14 +103,16 @@ const CartItems = ({ onNext }) => {
               <div className="flex items-center gap-4">
                 <img
                   src={item.image}
-                  alt={item.name}
+                  alt={item.alt || item.name}
                   className="w-20 h-20 object-cover rounded-lg bg-gray-100"
                 />
                 <div>
                   <h3 className="font-medium text-gray-900">{item.name}</h3>
-                  <p className="text-sm text-gray-500">Color: {item.color}</p>
+                  {item.color && (
+                    <p className="text-sm text-gray-500">Color: {item.color}</p>
+                  )}
                   <button
-                    onClick={() => removeItem(item.id)}
+                    onClick={() => removeFromCart(item.id)}
                     className="text-sm text-gray-400 hover:text-red-500 flex items-center gap-1 mt-1"
                   >
                     <X className="w-3 h-3" />
