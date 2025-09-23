@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, AlertCircle } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useUser } from "@/context/UserContext";
+import authService from "@/lib/api/services/auth";
 
 const Signin = () => {
   const navigate = useNavigate();
@@ -58,30 +59,63 @@ const Signin = () => {
     if (!validateForm()) return;
 
     setIsLoading(true);
+    setErrors({}); // Clear previous errors
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      // For demo purposes, we'll use the default user data
-      // In a real app, this would come from the API response
-      const userData = {
-        firstName: "Sofia",
-        lastName: "Havertz",
-        displayName: "Sofia Havertz",
+      // Call the login API
+      const response = await authService.login({
         email: formData.email,
+        password: formData.password,
+      });
+
+      console.log("Login successful:", response);
+
+      // Extract user data from API response
+      // Adjust these field names based on your actual API response structure
+      const userData = {
+        id: response.user?.id || response.id,
+        firstName:
+          response.user?.first_name || response.user?.firstName || "User",
+        lastName: response.user?.last_name || response.user?.lastName || "",
+        displayName:
+          response.user?.display_name ||
+          response.user?.displayName ||
+          `${response.user?.first_name || ""} ${
+            response.user?.last_name || ""
+          }`.trim() ||
+          response.user?.email?.split("@")[0] ||
+          "User",
+        email: response.user?.email || response.email || formData.email,
         avatar:
+          response.user?.avatar ||
+          response.user?.profile_image ||
           "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&auto=format",
+        role: response.user?.role || response.user?.user_type || "user",
+        isActive:
+          response.user?.is_active !== undefined
+            ? response.user.is_active
+            : true,
       };
 
-      // Log in the user
+      // Log in the user with the data from API
       login(userData);
 
-      // Redirect to home page
-      navigate("/");
+      // Store remember me preference
+      if (formData.rememberMe) {
+        localStorage.setItem("rememberMe", "true");
+      } else {
+        localStorage.removeItem("rememberMe");
+      }
+
+      // Redirect to home page or intended destination
+      const intendedPath = localStorage.getItem("intendedPath") || "/";
+      localStorage.removeItem("intendedPath");
+      navigate(intendedPath);
     } catch (error) {
       console.error("Signin error:", error);
-      setErrors({ general: "Invalid email or password" });
+      setErrors({
+        general: error.message || "Login failed. Please try again.",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -121,7 +155,8 @@ const Signin = () => {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* General Error */}
             {errors.general && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm">
+              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
                 {errors.general}
               </div>
             )}

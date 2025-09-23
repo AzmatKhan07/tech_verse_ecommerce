@@ -7,6 +7,7 @@ import {
   Users,
   Settings,
   LogOut,
+  List,
 } from "lucide-react";
 import { useUser } from "@/context/UserContext";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -43,6 +44,13 @@ const AdminSidebar = ({ isOpen, onClose }) => {
       label: "Orders",
       icon: ShoppingCart,
       path: "/admin/orders",
+    },
+
+    {
+      id: "categories",
+      label: "Categories",
+      icon: List,
+      path: "/admin/categories",
     },
   ];
 

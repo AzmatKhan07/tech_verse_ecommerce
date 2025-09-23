@@ -1,17 +1,17 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
+import authService from "@/lib/api/services/auth";
 
 // Create User Context
 const UserContext = createContext();
 
 // Initial user state
 const initialUserState = {
-  firstName: "Sofia",
-  lastName: "Havertz",
-  displayName: "Sofia Havertz",
-  email: "sofia.havertz@example.com",
-  avatar:
-    "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&auto=format",
-  isLoggedIn: true,
+  firstName: "",
+  lastName: "",
+  displayName: "",
+  email: "",
+  avatar: "",
+  isLoggedIn: false,
   addresses: {
     billing: {
       id: "billing-1",
@@ -74,17 +74,37 @@ const initialUserState = {
 export const UserProvider = ({ children }) => {
   const [user, setUser] = useState(initialUserState);
 
-  // Load user data from localStorage on mount
+  // Load user data from localStorage on mount and check authentication
   useEffect(() => {
-    const savedUser = localStorage.getItem("user");
-    if (savedUser) {
-      try {
-        const userData = JSON.parse(savedUser);
-        setUser({ ...initialUserState, ...userData });
-      } catch (error) {
-        console.error("Error loading user from localStorage:", error);
+    const initializeUser = async () => {
+      const savedUser = localStorage.getItem("user");
+      const token = localStorage.getItem("token");
+
+      if (savedUser && token && authService.isAuthenticated()) {
+        try {
+          const userData = JSON.parse(savedUser);
+          setUser({ ...initialUserState, ...userData, isLoggedIn: true });
+
+          // Optionally verify token with server
+          try {
+            const currentUser = await authService.getCurrentUser();
+            setUser((prev) => ({ ...prev, ...currentUser, isLoggedIn: true }));
+          } catch (error) {
+            console.error("Token verification failed:", error);
+            // Token is invalid, logout user
+            logout();
+          }
+        } catch (error) {
+          console.error("Error loading user from localStorage:", error);
+          logout();
+        }
+      } else {
+        // No valid session, ensure user is logged out
+        setUser({ ...initialUserState, isLoggedIn: false });
       }
-    }
+    };
+
+    initializeUser();
   }, []);
 
   // Save user data to localStorage whenever user changes
@@ -116,12 +136,21 @@ export const UserProvider = ({ children }) => {
   };
 
   // Logout user
-  const logout = () => {
-    setUser({
-      ...initialUserState,
-      isLoggedIn: false,
-    });
-    localStorage.removeItem("user");
+  const logout = async () => {
+    try {
+      // Call logout API
+      await authService.logout();
+    } catch (error) {
+      console.error("Logout error:", error);
+    } finally {
+      // Always clear local state
+      setUser({
+        ...initialUserState,
+        isLoggedIn: false,
+      });
+      localStorage.removeItem("user");
+      localStorage.removeItem("rememberMe");
+    }
   };
 
   // Update address

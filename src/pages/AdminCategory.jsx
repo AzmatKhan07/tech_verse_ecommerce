@@ -8,43 +8,57 @@ import {
   Search,
   Edit,
   Trash2,
-  Package,
-  Filter,
+  Folder,
   Loader2,
   AlertCircle,
+  Eye,
+  EyeOff,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import AdminLayout from "@/components/admin/AdminLayout";
-import { useProducts, useDeleteProduct } from "@/lib/query/hooks/useProducts";
+import {
+  useCategories,
+  useDeleteCategory,
+  useCreateCategory,
+  useUpdateCategory,
+} from "@/lib/query/hooks/useCategories";
+import { CategoryForm } from "@/components/admin/CategoryForm";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
-const AdminProducts = () => {
-  const navigate = useNavigate();
+const AdminCategory = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterCategory, setFilterCategory] = useState("All");
-  const [filterStatus, setFilterStatus] = useState("All");
   const [currentPage, setCurrentPage] = useState(1);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [filterActive, setFilterActive] = useState("All");
 
   // TanStack Query hooks
-  const deleteProductMutation = useDeleteProduct();
+  const deleteCategoryMutation = useDeleteCategory();
+  const createCategoryMutation = useCreateCategory();
+  const updateCategoryMutation = useUpdateCategory();
 
   // Build query parameters
   const queryParams = {
     page: currentPage,
     page_size: 20,
     ...(searchTerm && { search: searchTerm }),
-    ...(filterCategory !== "All" && { category: filterCategory }),
+    ...(filterActive !== "All" && { is_active: filterActive === "Active" }),
   };
 
   const {
-    data: productsData,
+    data: categoriesData,
     isLoading: loading,
     error,
     refetch,
-  } = useProducts(queryParams);
+  } = useCategories(queryParams);
 
   // Extract data from the query result
-  const products = productsData?.products || [];
-  const pagination = productsData?.pagination || {
+  const categories = categoriesData?.categories || [];
+  const pagination = categoriesData?.pagination || {
     count: 0,
     totalPages: 1,
     currentPage: 1,
@@ -65,45 +79,63 @@ const AdminProducts = () => {
     return () => clearTimeout(timeoutId);
   }, [searchTerm]);
 
-  const formatPrice = (amount) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 2,
-    }).format(amount);
+  const getStatusColor = (isActive) => {
+    return isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800";
   };
 
-  const getStatusColor = (status) => {
-    switch (status.toLowerCase()) {
-      case "active":
-        return "bg-green-100 text-green-800";
-      case "low stock":
-        return "bg-orange-100 text-orange-800";
-      case "out of stock":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  // Get unique categories from products
-  const categories = [
-    "All",
-    ...new Set(
-      products.map((product) => product.category?.name || product.category)
-    ),
-  ].filter(Boolean);
-
-  // Handle product deletion
-  const handleDeleteProduct = async (productId) => {
-    if (window.confirm("Are you sure you want to delete this product?")) {
+  // Handle category deletion
+  const handleDeleteCategory = async (categoryId) => {
+    if (window.confirm("Are you sure you want to delete this category?")) {
       try {
-        await deleteProductMutation.mutateAsync(productId);
+        await deleteCategoryMutation.mutateAsync(categoryId);
       } catch (err) {
-        console.error("Error deleting product:", err);
-        // Error is already handled by the mutation
+        console.error("Error deleting category:", err);
       }
     }
+  };
+
+  // Handle category toggle (active/inactive)
+  const handleToggleCategory = async (category) => {
+    try {
+      const currentStatus =
+        category.status !== undefined ? category.status : category.is_active;
+      await updateCategoryMutation.mutateAsync({
+        id: category.id,
+        data: { is_active: !currentStatus },
+      });
+    } catch (err) {
+      console.error("Error toggling category:", err);
+    }
+  };
+
+  // Handle form submission
+  const handleFormSubmit = async (formData) => {
+    try {
+      if (editingCategory) {
+        await updateCategoryMutation.mutateAsync({
+          id: editingCategory.id,
+          data: formData,
+        });
+      } else {
+        await createCategoryMutation.mutateAsync(formData);
+      }
+      setIsFormOpen(false);
+      setEditingCategory(null);
+    } catch (err) {
+      console.error("Error saving category:", err);
+    }
+  };
+
+  // Handle edit category
+  const handleEditCategory = (category) => {
+    setEditingCategory(category);
+    setIsFormOpen(true);
+  };
+
+  // Handle add new category
+  const handleAddCategory = () => {
+    setEditingCategory(null);
+    setIsFormOpen(true);
   };
 
   // Handle pagination
@@ -118,27 +150,27 @@ const AdminProducts = () => {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">
-              Products
+              Categories
             </h1>
-            <p className="text-gray-600 mt-1">Manage your product inventory</p>
+            <p className="text-gray-600 mt-1">Manage your product categories</p>
           </div>
           <Button
             className="bg-black text-white hover:bg-gray-800 w-full sm:w-auto"
-            onClick={() => navigate("/admin/add-product")}
+            onClick={handleAddCategory}
           >
             <Plus className="w-4 h-4 mr-2" />
-            Add Product
+            Add Category
           </Button>
         </div>
 
-        {/* Products Stats */}
+        {/* Categories Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-2">
-                <Package className="w-5 h-5 text-blue-500" />
+                <Folder className="w-5 h-5 text-blue-500" />
                 <div>
-                  <p className="text-sm text-gray-600">Total Products</p>
+                  <p className="text-sm text-gray-600">Total Categories</p>
                   <p className="text-xl font-bold">
                     {loading ? (
                       <Loader2 className="w-5 h-5 animate-spin" />
@@ -161,25 +193,9 @@ const AdminProducts = () => {
                     {loading ? (
                       <Loader2 className="w-5 h-5 animate-spin" />
                     ) : (
-                      products.filter((p) => p.is_active !== false).length
-                    )}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <div className="w-5 h-5 bg-orange-500 rounded-full"></div>
-                <div>
-                  <p className="text-sm text-gray-600">Low Stock</p>
-                  <p className="text-xl font-bold">
-                    {loading ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : (
-                      products.filter((p) => p.stock <= 5 && p.stock > 0).length
+                      categories.filter((c) =>
+                        c.status !== undefined ? c.status : c.is_active
+                      ).length
                     )}
                   </p>
                 </div>
@@ -192,12 +208,33 @@ const AdminProducts = () => {
               <div className="flex items-center gap-2">
                 <div className="w-5 h-5 bg-red-500 rounded-full"></div>
                 <div>
-                  <p className="text-sm text-gray-600">Out of Stock</p>
+                  <p className="text-sm text-gray-600">Inactive</p>
                   <p className="text-xl font-bold">
                     {loading ? (
                       <Loader2 className="w-5 h-5 animate-spin" />
                     ) : (
-                      products.filter((p) => p.stock === 0).length
+                      categories.filter(
+                        (c) =>
+                          !(c.status !== undefined ? c.status : c.is_active)
+                      ).length
+                    )}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 bg-purple-500 rounded-full"></div>
+                <div>
+                  <p className="text-sm text-gray-600">With Products</p>
+                  <p className="text-xl font-bold">
+                    {loading ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      categories.filter((c) => c.product_count > 0).length
                     )}
                   </p>
                 </div>
@@ -214,36 +251,22 @@ const AdminProducts = () => {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <Input
-                  placeholder="Search products..."
+                  placeholder="Search categories..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
                 />
               </div>
 
-              {/* Category Filter */}
-              <select
-                value={filterCategory}
-                onChange={(e) => setFilterCategory(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
-              >
-                {categories.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
-              </select>
-
               {/* Status Filter */}
               <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
+                value={filterActive}
+                onChange={(e) => setFilterActive(e.target.value)}
                 className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
               >
                 <option value="All">All Status</option>
                 <option value="Active">Active</option>
-                <option value="Low Stock">Low Stock</option>
-                <option value="Out of Stock">Out of Stock</option>
+                <option value="Inactive">Inactive</option>
               </select>
             </div>
           </CardContent>
@@ -257,7 +280,7 @@ const AdminProducts = () => {
                 <AlertCircle className="w-5 h-5" />
                 <span>
                   {error.message ||
-                    "Failed to fetch products. Please try again."}
+                    "Failed to fetch categories. Please try again."}
                 </span>
                 <Button
                   size="sm"
@@ -272,33 +295,32 @@ const AdminProducts = () => {
           </Card>
         )}
 
-        {/* Products Table */}
+        {/* Categories Table */}
         <Card>
           <CardHeader>
-            <CardTitle>Products List ({totalCount})</CardTitle>
+            <CardTitle>Categories List ({totalCount})</CardTitle>
           </CardHeader>
           <CardContent>
             {loading ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="w-8 h-8 animate-spin text-gray-500" />
-                <span className="ml-2 text-gray-500">Loading products...</span>
+                <span className="ml-2 text-gray-500">
+                  Loading categories...
+                </span>
               </div>
             ) : (
               <div className="overflow-x-auto -mx-6 px-6">
-                <table className="w-full min-w-[800px]">
+                <table className="w-full min-w-[600px]">
                   <thead>
                     <tr className="border-b border-gray-200">
-                      <th className="text-left py-3 px-4 font-medium text-gray-600">
-                        Product
-                      </th>
                       <th className="text-left py-3 px-4 font-medium text-gray-600">
                         Category
                       </th>
                       <th className="text-left py-3 px-4 font-medium text-gray-600">
-                        Price
+                        Description
                       </th>
                       <th className="text-left py-3 px-4 font-medium text-gray-600">
-                        Stock
+                        Products
                       </th>
                       <th className="text-left py-3 px-4 font-medium text-gray-600">
                         Status
@@ -312,67 +334,56 @@ const AdminProducts = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {products.map((product) => (
+                    {categories.map((category) => (
                       <tr
-                        key={product.id}
+                        key={category.id}
                         className="border-b border-gray-100 hover:bg-gray-50"
                       >
                         <td className="py-4 px-4">
                           <div className="flex items-center gap-3">
-                            <img
-                              src={
-                                product.image ||
-                                product.images?.[0] ||
-                                "/placeholder-product.jpg"
-                              }
-                              alt={product.name}
-                              className="w-12 h-12 object-cover rounded-lg"
-                              onError={(e) => {
-                                e.target.src = "/placeholder-product.jpg";
-                              }}
-                            />
+                            <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                              <Folder className="w-5 h-5 text-gray-600" />
+                            </div>
                             <div>
                               <p className="font-medium text-gray-900">
-                                {product.name}
+                                {category.category_name || category.name}
                               </p>
                               <p className="text-sm text-gray-500">
-                                {product.description ||
-                                  product.short_description}
+                                {category.category_slug || category.slug}
                               </p>
                             </div>
                           </div>
                         </td>
-                        <td className="py-4 px-4 text-gray-600">
-                          {product.category?.name || product.category}
-                        </td>
-                        <td className="py-4 px-4 font-medium">
-                          {formatPrice(product.price)}
+                        <td className="py-4 px-4 text-gray-600 max-w-xs">
+                          <p className="truncate">
+                            {category.description || "No description"}
+                          </p>
                         </td>
                         <td className="py-4 px-4">
-                          <span
-                            className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              product.stock === 0
-                                ? "bg-red-100 text-red-800"
-                                : product.stock <= 5
-                                ? "bg-orange-100 text-orange-800"
-                                : "bg-green-100 text-green-800"
-                            }`}
-                          >
-                            {product.stock || 0}
+                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {category.product_count || 0}
                           </span>
                         </td>
                         <td className="py-4 px-4">
                           <Badge
                             className={getStatusColor(
-                              product.is_active ? "Active" : "Inactive"
+                              category.status !== undefined
+                                ? category.status
+                                : category.is_active
                             )}
                           >
-                            {product.is_active ? "Active" : "Inactive"}
+                            {(
+                              category.status !== undefined
+                                ? category.status
+                                : category.is_active
+                            )
+                              ? "Active"
+                              : "Inactive"}
                           </Badge>
                         </td>
                         <td className="py-4 px-4 text-gray-600">
-                          {product.created_at
-                            ? new Date(product.created_at).toLocaleDateString()
+                          {category.created_at
+                            ? new Date(category.created_at).toLocaleDateString()
                             : "N/A"}
                         </td>
                         <td className="py-4 px-4">
@@ -381,9 +392,24 @@ const AdminProducts = () => {
                               size="sm"
                               variant="outline"
                               className="h-8 w-8 p-0"
-                              onClick={() =>
-                                navigate(`/admin/edit-product/${product.id}`)
-                              }
+                              onClick={() => handleToggleCategory(category)}
+                              disabled={updateCategoryMutation.isPending}
+                            >
+                              {(
+                                category.status !== undefined
+                                  ? category.status
+                                  : category.is_active
+                              ) ? (
+                                <EyeOff className="w-4 h-4" />
+                              ) : (
+                                <Eye className="w-4 h-4" />
+                              )}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8 w-8 p-0"
+                              onClick={() => handleEditCategory(category)}
                             >
                               <Edit className="w-4 h-4" />
                             </Button>
@@ -391,10 +417,10 @@ const AdminProducts = () => {
                               size="sm"
                               variant="outline"
                               className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
-                              onClick={() => handleDeleteProduct(product.id)}
-                              disabled={deleteProductMutation.isPending}
+                              onClick={() => handleDeleteCategory(category.id)}
+                              disabled={deleteCategoryMutation.isPending}
                             >
-                              {deleteProductMutation.isPending ? (
+                              {deleteCategoryMutation.isPending ? (
                                 <Loader2 className="w-4 h-4 animate-spin" />
                               ) : (
                                 <Trash2 className="w-4 h-4" />
@@ -407,9 +433,9 @@ const AdminProducts = () => {
                   </tbody>
                 </table>
 
-                {products.length === 0 && !loading && (
+                {categories.length === 0 && !loading && (
                   <div className="text-center py-8 text-gray-500">
-                    No products found matching your criteria.
+                    No categories found matching your criteria.
                   </div>
                 )}
               </div>
@@ -425,7 +451,7 @@ const AdminProducts = () => {
                 <div className="text-sm text-gray-600">
                   Showing {(currentPage - 1) * 20 + 1} to{" "}
                   {Math.min(currentPage * 20, totalCount)} of {totalCount}{" "}
-                  products
+                  categories
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
@@ -452,9 +478,32 @@ const AdminProducts = () => {
             </CardContent>
           </Card>
         )}
+
+        {/* Category Form Dialog */}
+        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>
+                {editingCategory ? "Edit Category" : "Add New Category"}
+              </DialogTitle>
+            </DialogHeader>
+            <CategoryForm
+              category={editingCategory}
+              onSubmit={handleFormSubmit}
+              onCancel={() => {
+                setIsFormOpen(false);
+                setEditingCategory(null);
+              }}
+              isLoading={
+                createCategoryMutation.isPending ||
+                updateCategoryMutation.isPending
+              }
+            />
+          </DialogContent>
+        </Dialog>
       </div>
     </AdminLayout>
   );
 };
 
-export default AdminProducts;
+export default AdminCategory;

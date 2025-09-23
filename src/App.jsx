@@ -20,6 +20,7 @@ import { CartProvider } from "./context/CartContext";
 import { UserProvider } from "./context/UserContext";
 import { AdminProvider } from "./context/AdminContext";
 import { WishlistProvider } from "./context/WishlistContext";
+import AdminCategory from "./pages/AdminCategory";
 
 function App() {
   return (
@@ -37,6 +38,7 @@ function App() {
               {/* Admin routes without navbar/footer */}
               <Route path="/admin/dashboard" element={<Dashboard />} />
               <Route path="/admin/products" element={<AdminProducts />} />
+              <Route path="/admin/categories" element={<AdminCategory />} />
               <Route path="/admin/add-product" element={<AddProduct />} />
               <Route path="/admin/orders" element={<AdminOrders />} />
               <Route path="/admin/orders/:orderId" element={<OrderDetails />} />
