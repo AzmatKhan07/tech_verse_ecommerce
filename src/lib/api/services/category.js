@@ -51,11 +51,28 @@ class CategoryService {
   // Get a single category by ID
   async getCategory(id) {
     try {
-      const response = await apiClient.get(`${this.baseURL}${id}/`);
+      console.log("🔗 Fetching category:", `${this.baseURL}/${id}/`);
+      const response = await apiClient.get(`${this.baseURL}/${id}/`);
+      console.log("📦 Category fetched successfully:", response.data);
       return response.data;
     } catch (error) {
-      console.error("Error fetching category:", error);
-      throw error;
+      console.error("❌ Error fetching category:", error);
+
+      // Provide more detailed error information
+      if (error.response) {
+        console.error("Response status:", error.response.status);
+        console.error("Response data:", error.response.data);
+        throw new Error(
+          `API Error: ${error.response.status} - ${
+            error.response.data?.detail || "Unknown error"
+          }`
+        );
+      } else if (error.request) {
+        console.error("Request error:", error.request);
+        throw new Error("Network Error: Unable to connect to the server");
+      } else {
+        throw new Error(`Request Error: ${error.message}`);
+      }
     }
   }
 
@@ -68,12 +85,21 @@ class CategoryService {
         const formData = new FormData();
         formData.append("category_name", categoryData.name);
         formData.append("category_slug", categoryData.slug);
-        formData.append("category_image", categoryData.image);
+        if (categoryData.image && categoryData.image instanceof File) {
+          formData.append("category_image", categoryData.image);
+        }
         formData.append("is_home", categoryData.is_home || false);
         formData.append(
           "status",
           categoryData.is_active !== undefined ? categoryData.is_active : true
         );
+        // Only append parent_category if it's not 0 (no parent)
+        if (
+          categoryData.parent_category &&
+          categoryData.parent_category !== 0
+        ) {
+          formData.append("parent_category", categoryData.parent_category);
+        }
 
         console.log("🔗 Creating category with file upload:", {
           category_name: categoryData.name,
@@ -98,13 +124,25 @@ class CategoryService {
         const apiData = {
           category_name: categoryData.name,
           category_slug: categoryData.slug,
-          category_image: categoryData.image || "",
           is_home: categoryData.is_home || false,
           status:
             categoryData.is_active !== undefined
               ? categoryData.is_active
               : true,
+          // Only include parent_category if it's not 0 (no parent)
+          ...(categoryData.parent_category &&
+            categoryData.parent_category !== 0 && {
+              parent_category: categoryData.parent_category,
+            }),
         };
+
+        // Only include category_image if it's a string (existing image URL)
+        if (categoryData.image && typeof categoryData.image === "string") {
+          apiData.category_image = categoryData.image;
+        } else if (categoryData.image === null) {
+          // Explicitly set to null to remove existing image
+          apiData.category_image = null;
+        }
 
         console.log("🔗 Creating category with data:", apiData);
         const response = await apiClient.post(`${this.baseURL}/`, apiData);
@@ -117,8 +155,8 @@ class CategoryService {
     }
   }
 
-  // Update an existing category
-  async updateCategory(id, categoryData) {
+  // Update an existing category by slug
+  async updateCategory(slug, categoryData) {
     try {
       // Check if we have a file upload
       if (categoryData.image && categoryData.image instanceof File) {
@@ -126,12 +164,21 @@ class CategoryService {
         const formData = new FormData();
         formData.append("category_name", categoryData.name);
         formData.append("category_slug", categoryData.slug);
-        formData.append("category_image", categoryData.image);
+        if (categoryData.image && categoryData.image instanceof File) {
+          formData.append("category_image", categoryData.image);
+        }
         formData.append("is_home", categoryData.is_home || false);
         formData.append(
           "status",
           categoryData.is_active !== undefined ? categoryData.is_active : true
         );
+        // Only append parent_category if it's not 0 (no parent)
+        if (
+          categoryData.parent_category &&
+          categoryData.parent_category !== 0
+        ) {
+          formData.append("parent_category", categoryData.parent_category);
+        }
 
         console.log("🔗 Updating category with file upload:", {
           id,
@@ -146,7 +193,7 @@ class CategoryService {
         });
 
         const response = await apiClient.put(
-          `${this.baseURL}/${id}/`,
+          `${this.baseURL}/${slug}/`,
           formData,
           {
             headers: {
@@ -161,16 +208,31 @@ class CategoryService {
         const apiData = {
           category_name: categoryData.name,
           category_slug: categoryData.slug,
-          category_image: categoryData.image || "",
           is_home: categoryData.is_home || false,
           status:
             categoryData.is_active !== undefined
               ? categoryData.is_active
               : true,
+          // Only include parent_category if it's not 0 (no parent)
+          ...(categoryData.parent_category &&
+            categoryData.parent_category !== 0 && {
+              parent_category: categoryData.parent_category,
+            }),
         };
 
+        // Only include category_image if it's a string (existing image URL)
+        if (categoryData.image && typeof categoryData.image === "string") {
+          apiData.category_image = categoryData.image;
+        } else if (categoryData.image === null) {
+          // Explicitly set to null to remove existing image
+          apiData.category_image = null;
+        }
+
         console.log("🔗 Updating category with data:", apiData);
-        const response = await apiClient.put(`${this.baseURL}/${id}/`, apiData);
+        const response = await apiClient.put(
+          `${this.baseURL}/${slug}/`,
+          apiData
+        );
         console.log("📦 Category updated successfully:", response.data);
         return response.data;
       }
@@ -180,8 +242,8 @@ class CategoryService {
     }
   }
 
-  // Partially update a category
-  async patchCategory(id, categoryData) {
+  // Partially update a category by slug
+  async patchCategory(slug, categoryData) {
     try {
       // For partial updates, we only send the fields that are provided
       const apiData = {};
@@ -190,15 +252,29 @@ class CategoryService {
         apiData.category_name = categoryData.name;
       if (categoryData.slug !== undefined)
         apiData.category_slug = categoryData.slug;
-      if (categoryData.image !== undefined)
-        apiData.category_image = categoryData.image;
+      if (categoryData.image !== undefined) {
+        if (typeof categoryData.image === "string") {
+          apiData.category_image = categoryData.image;
+        } else if (categoryData.image === null) {
+          // Explicitly set to null to remove existing image
+          apiData.category_image = null;
+        }
+      }
       if (categoryData.is_home !== undefined)
         apiData.is_home = categoryData.is_home;
       if (categoryData.is_active !== undefined)
         apiData.status = categoryData.is_active;
+      if (
+        categoryData.parent_category !== undefined &&
+        categoryData.parent_category !== 0
+      )
+        apiData.parent_category = categoryData.parent_category;
 
       console.log("🔗 Patching category with data:", apiData);
-      const response = await apiClient.patch(`${this.baseURL}/${id}/`, apiData);
+      const response = await apiClient.patch(
+        `${this.baseURL}/${slug}/`,
+        apiData
+      );
       console.log("📦 Category patched successfully:", response.data);
       return response.data;
     } catch (error) {
@@ -207,14 +283,31 @@ class CategoryService {
     }
   }
 
-  // Delete a category
-  async deleteCategory(id) {
+  // Delete a category by slug
+  async deleteCategory(slug) {
     try {
-      const response = await apiClient.delete(`${this.baseURL}${id}/`);
+      console.log("🔗 Deleting category by slug:", `${this.baseURL}/${slug}/`);
+      const response = await apiClient.delete(`${this.baseURL}/${slug}/`);
+      console.log("📦 Category deleted successfully:", response.status);
       return response.data;
     } catch (error) {
-      console.error("Error deleting category:", error);
-      throw error;
+      console.error("❌ Error deleting category:", error);
+
+      // Provide more detailed error information
+      if (error.response) {
+        console.error("Response status:", error.response.status);
+        console.error("Response data:", error.response.data);
+        throw new Error(
+          `API Error: ${error.response.status} - ${
+            error.response.data?.detail || "Unknown error"
+          }`
+        );
+      } else if (error.request) {
+        console.error("Request error:", error.request);
+        throw new Error("Network Error: Unable to connect to the server");
+      } else {
+        throw new Error(`Request Error: ${error.message}`);
+      }
     }
   }
 
@@ -230,6 +323,37 @@ class CategoryService {
   // Get active categories only
   async getActiveCategories() {
     return this.getCategories({ is_active: true });
+  }
+
+  // Get category KPIs/statistics
+  async getCategoryKPIs() {
+    try {
+      console.log(
+        "🔗 Fetching category KPIs from:",
+        `${this.baseURL}/category-kpis/`
+      );
+      const response = await apiClient.get(`${this.baseURL}/category-kpis/`);
+      console.log("📦 Category KPIs API Response:", response.data);
+      return response.data;
+    } catch (error) {
+      console.error("❌ Error fetching category KPIs:", error);
+
+      // Provide more detailed error information
+      if (error.response) {
+        console.error("Response status:", error.response.status);
+        console.error("Response data:", error.response.data);
+        throw new Error(
+          `API Error: ${error.response.status} - ${
+            error.response.data?.detail || "Unknown error"
+          }`
+        );
+      } else if (error.request) {
+        console.error("Request error:", error.request);
+        throw new Error("Network Error: Unable to connect to the server");
+      } else {
+        throw new Error(`Request Error: ${error.message}`);
+      }
+    }
   }
 }
 

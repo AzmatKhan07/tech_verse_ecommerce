@@ -20,6 +20,8 @@ import {
   useDeleteCategory,
   useCreateCategory,
   useUpdateCategory,
+  usePatchCategory,
+  useCategoryKPIs,
 } from "@/lib/query/hooks/useCategories";
 import { CategoryForm } from "@/components/admin/CategoryForm";
 import {
@@ -28,6 +30,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useToast } from "@/lib/hooks/use-toast";
 
 const AdminCategory = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -35,11 +45,19 @@ const AdminCategory = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
   const [filterActive, setFilterActive] = useState("All");
+  const [filterHome, setFilterHome] = useState("All");
+  const [filterProducts, setFilterProducts] = useState("All");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState(null);
 
   // TanStack Query hooks
   const deleteCategoryMutation = useDeleteCategory();
   const createCategoryMutation = useCreateCategory();
   const updateCategoryMutation = useUpdateCategory();
+  const patchCategoryMutation = usePatchCategory();
+
+  // Toast hook
+  const { toast } = useToast();
 
   // Build query parameters
   const queryParams = {
@@ -47,6 +65,7 @@ const AdminCategory = () => {
     page_size: 20,
     ...(searchTerm && { search: searchTerm }),
     ...(filterActive !== "All" && { is_active: filterActive === "Active" }),
+    ...(filterHome !== "All" && { is_home: filterHome === "Home" }),
   };
 
   const {
@@ -56,8 +75,25 @@ const AdminCategory = () => {
     refetch,
   } = useCategories(queryParams);
 
-  // Extract data from the query result
-  const categories = categoriesData?.categories || [];
+  // Fetch category KPIs
+  const {
+    data: kpisData,
+    isLoading: kpisLoading,
+    error: kpisError,
+  } = useCategoryKPIs();
+
+  // Extract data from the query result and apply client-side filters
+  const allCategories = categoriesData?.categories || [];
+
+  // Apply client-side filtering for products filter
+  const categories = allCategories.filter((category) => {
+    if (filterProducts === "With Products") {
+      return (category.product_count || 0) > 0;
+    } else if (filterProducts === "Without Products") {
+      return (category.product_count || 0) === 0;
+    }
+    return true; // "All" - no filtering
+  });
   const pagination = categoriesData?.pagination || {
     count: 0,
     totalPages: 1,
@@ -77,20 +113,41 @@ const AdminCategory = () => {
     }, 500);
 
     return () => clearTimeout(timeoutId);
-  }, [searchTerm]);
+  }, [searchTerm, filterActive, filterHome, filterProducts]);
 
   const getStatusColor = (isActive) => {
     return isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800";
   };
 
   // Handle category deletion
-  const handleDeleteCategory = async (categoryId) => {
-    if (window.confirm("Are you sure you want to delete this category?")) {
-      try {
-        await deleteCategoryMutation.mutateAsync(categoryId);
-      } catch (err) {
-        console.error("Error deleting category:", err);
-      }
+  const handleDeleteCategory = (category) => {
+    setCategoryToDelete(category);
+    setDeleteDialogOpen(true);
+  };
+
+  // Confirm category deletion
+  const confirmDeleteCategory = async () => {
+    if (!categoryToDelete) return;
+
+    try {
+      const slug = categoryToDelete.category_slug || categoryToDelete.slug;
+      await deleteCategoryMutation.mutateAsync(slug);
+      toast({
+        title: "Category Deleted",
+        description: `"${
+          categoryToDelete.category_name || categoryToDelete.name
+        }" has been deleted successfully.`,
+        variant: "success",
+      });
+      setDeleteDialogOpen(false);
+      setCategoryToDelete(null);
+    } catch (err) {
+      console.error("Error deleting category:", err);
+      toast({
+        title: "Error",
+        description: "Failed to delete category. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -99,12 +156,25 @@ const AdminCategory = () => {
     try {
       const currentStatus =
         category.status !== undefined ? category.status : category.is_active;
-      await updateCategoryMutation.mutateAsync({
-        id: category.id,
+      const slug = category.category_slug || category.slug;
+      await patchCategoryMutation.mutateAsync({
+        slug: slug,
         data: { is_active: !currentStatus },
+      });
+      toast({
+        title: "Category Status Updated",
+        description: `"${category.category_name || category.name}" has been ${
+          !currentStatus ? "activated" : "deactivated"
+        }.`,
+        variant: "success",
       });
     } catch (err) {
       console.error("Error toggling category:", err);
+      toast({
+        title: "Error",
+        description: "Failed to update category status. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -112,17 +182,35 @@ const AdminCategory = () => {
   const handleFormSubmit = async (formData) => {
     try {
       if (editingCategory) {
+        const slug = editingCategory.category_slug || editingCategory.slug;
         await updateCategoryMutation.mutateAsync({
-          id: editingCategory.id,
+          slug: slug,
           data: formData,
+        });
+        toast({
+          title: "Category Updated",
+          description: `"${formData.name}" has been updated successfully.`,
+          variant: "success",
         });
       } else {
         await createCategoryMutation.mutateAsync(formData);
+        toast({
+          title: "Category Created",
+          description: `"${formData.name}" has been created successfully.`,
+          variant: "success",
+        });
       }
       setIsFormOpen(false);
       setEditingCategory(null);
     } catch (err) {
       console.error("Error saving category:", err);
+      toast({
+        title: "Error",
+        description: editingCategory
+          ? "Failed to update category. Please try again."
+          : "Failed to create category. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -172,10 +260,12 @@ const AdminCategory = () => {
                 <div>
                   <p className="text-sm text-gray-600">Total Categories</p>
                   <p className="text-xl font-bold">
-                    {loading ? (
+                    {kpisLoading ? (
                       <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : kpisError ? (
+                      <span className="text-red-500">Error</span>
                     ) : (
-                      totalCount
+                      kpisData?.total_categories || totalCount
                     )}
                   </p>
                 </div>
@@ -190,9 +280,12 @@ const AdminCategory = () => {
                 <div>
                   <p className="text-sm text-gray-600">Active</p>
                   <p className="text-xl font-bold">
-                    {loading ? (
+                    {kpisLoading ? (
                       <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : kpisError ? (
+                      <span className="text-red-500">Error</span>
                     ) : (
+                      kpisData?.active_categories ||
                       categories.filter((c) =>
                         c.status !== undefined ? c.status : c.is_active
                       ).length
@@ -210,9 +303,12 @@ const AdminCategory = () => {
                 <div>
                   <p className="text-sm text-gray-600">Inactive</p>
                   <p className="text-xl font-bold">
-                    {loading ? (
+                    {kpisLoading ? (
                       <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : kpisError ? (
+                      <span className="text-red-500">Error</span>
                     ) : (
+                      kpisData?.inactive_categories ||
                       categories.filter(
                         (c) =>
                           !(c.status !== undefined ? c.status : c.is_active)
@@ -231,9 +327,12 @@ const AdminCategory = () => {
                 <div>
                   <p className="text-sm text-gray-600">With Products</p>
                   <p className="text-xl font-bold">
-                    {loading ? (
+                    {kpisLoading ? (
                       <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : kpisError ? (
+                      <span className="text-red-500">Error</span>
                     ) : (
+                      kpisData?.categories_with_products ||
                       categories.filter((c) => c.product_count > 0).length
                     )}
                   </p>
@@ -246,9 +345,9 @@ const AdminCategory = () => {
         {/* Filters */}
         <Card>
           <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row gap-4">
+            <div className="space-y-4">
               {/* Search */}
-              <div className="relative flex-1">
+              <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <Input
                   placeholder="Search categories..."
@@ -258,16 +357,83 @@ const AdminCategory = () => {
                 />
               </div>
 
-              {/* Status Filter */}
-              <select
-                value={filterActive}
-                onChange={(e) => setFilterActive(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
-              >
-                <option value="All">All Status</option>
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-              </select>
+              {/* Filter Row */}
+              <div className="flex flex-col sm:flex-row gap-4">
+                {/* Status Filter */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    Status
+                  </label>
+                  <Select value={filterActive} onValueChange={setFilterActive}>
+                    <SelectTrigger className="w-full sm:w-[160px]">
+                      <SelectValue placeholder="Filter by status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="All">All Status</SelectItem>
+                      <SelectItem value="Active">Active</SelectItem>
+                      <SelectItem value="Inactive">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Home Category Filter */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    Home Category
+                  </label>
+                  <Select value={filterHome} onValueChange={setFilterHome}>
+                    <SelectTrigger className="w-full sm:w-[160px]">
+                      <SelectValue placeholder="Filter by home" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="All">All Categories</SelectItem>
+                      <SelectItem value="Home">Home Categories</SelectItem>
+                      <SelectItem value="Not Home">Not Home</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Products Filter */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    Products
+                  </label>
+                  <Select
+                    value={filterProducts}
+                    onValueChange={setFilterProducts}
+                  >
+                    <SelectTrigger className="w-full sm:w-[160px]">
+                      <SelectValue placeholder="Filter by products" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="All">All Categories</SelectItem>
+                      <SelectItem value="With Products">
+                        With Products
+                      </SelectItem>
+                      <SelectItem value="Without Products">
+                        Without Products
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Clear Filters Button */}
+                <div className="flex items-end">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setFilterActive("All");
+                      setFilterHome("All");
+                      setFilterProducts("All");
+                      setSearchTerm("");
+                    }}
+                    className="w-full sm:w-auto"
+                  >
+                    Clear Filters
+                  </Button>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -393,7 +559,7 @@ const AdminCategory = () => {
                               variant="outline"
                               className="h-8 w-8 p-0"
                               onClick={() => handleToggleCategory(category)}
-                              disabled={updateCategoryMutation.isPending}
+                              disabled={patchCategoryMutation.isPending}
                             >
                               {(
                                 category.status !== undefined
@@ -417,7 +583,7 @@ const AdminCategory = () => {
                               size="sm"
                               variant="outline"
                               className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
-                              onClick={() => handleDeleteCategory(category.id)}
+                              onClick={() => handleDeleteCategory(category)}
                               disabled={deleteCategoryMutation.isPending}
                             >
                               {deleteCategoryMutation.isPending ? (
@@ -499,6 +665,70 @@ const AdminCategory = () => {
                 updateCategoryMutation.isPending
               }
             />
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Delete Category</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 p-4 bg-red-50 rounded-lg">
+                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                  <Trash2 className="w-5 h-5 text-red-600" />
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900">
+                    {categoryToDelete?.category_name || categoryToDelete?.name}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    {categoryToDelete?.category_slug || categoryToDelete?.slug}
+                  </p>
+                </div>
+              </div>
+              <p className="text-gray-600">
+                Are you sure you want to delete this category? This action
+                cannot be undone.
+                {categoryToDelete?.product_count > 0 && (
+                  <span className="block mt-2 text-red-600 font-medium">
+                    ⚠️ This category has {categoryToDelete.product_count}{" "}
+                    product(s). Deleting it may affect those products.
+                  </span>
+                )}
+              </p>
+              <div className="flex gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setDeleteDialogOpen(false);
+                    setCategoryToDelete(null);
+                  }}
+                  className="flex-1"
+                  disabled={deleteCategoryMutation.isPending}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={confirmDeleteCategory}
+                  className="flex-1"
+                  disabled={deleteCategoryMutation.isPending}
+                >
+                  {deleteCategoryMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    "Delete Category"
+                  )}
+                </Button>
+              </div>
+            </div>
           </DialogContent>
         </Dialog>
       </div>

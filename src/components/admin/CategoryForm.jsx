@@ -4,7 +4,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Loader2, AlertCircle } from "lucide-react";
+import { useCategories } from "@/lib/query/hooks/useCategories";
 
 export const CategoryForm = ({ category, onSubmit, onCancel, isLoading }) => {
   const [formData, setFormData] = useState({
@@ -14,8 +22,19 @@ export const CategoryForm = ({ category, onSubmit, onCancel, isLoading }) => {
     image: null,
     is_active: true,
     is_home: false,
+    parent_category: 0,
   });
   const [errors, setErrors] = useState({});
+  const [currentImageUrl, setCurrentImageUrl] = useState(null);
+
+  // Load all categories for parent selection
+  const {
+    data: categoriesData,
+    isLoading: categoriesLoading,
+    error: categoriesError,
+  } = useCategories({ page_size: 100 }); // Load more categories for dropdown
+
+  const categories = categoriesData?.categories || [];
 
   // Populate form when editing
   useEffect(() => {
@@ -24,7 +43,7 @@ export const CategoryForm = ({ category, onSubmit, onCancel, isLoading }) => {
         name: category.category_name || category.name || "",
         slug: category.category_slug || category.slug || "",
         description: category.description || "",
-        image: category.category_image || category.image || null,
+        image: null, // Don't pre-populate image field for editing
         is_active:
           category.status !== undefined
             ? category.status
@@ -32,7 +51,11 @@ export const CategoryForm = ({ category, onSubmit, onCancel, isLoading }) => {
             ? category.is_active
             : true,
         is_home: category.is_home !== undefined ? category.is_home : false,
+        parent_category: category.parent_category || 0,
       });
+
+      // Set current image URL separately for display
+      setCurrentImageUrl(category.category_image || category.image || null);
     }
   }, [category]);
 
@@ -201,6 +224,57 @@ export const CategoryForm = ({ category, onSubmit, onCancel, isLoading }) => {
         </p>
       </div>
 
+      {/* Parent Category */}
+      <div className="space-y-2">
+        <Label htmlFor="parent_category">Parent Category</Label>
+        <Select
+          value={formData.parent_category.toString()}
+          onValueChange={(value) =>
+            handleInputChange("parent_category", parseInt(value))
+          }
+        >
+          <SelectTrigger
+            className={errors.parent_category ? "border-red-500" : ""}
+          >
+            <SelectValue placeholder="Select parent category (optional)" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="0">No Parent (Top Level)</SelectItem>
+            {categoriesLoading ? (
+              <SelectItem value="loading" disabled>
+                <div className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Loading categories...
+                </div>
+              </SelectItem>
+            ) : categoriesError ? (
+              <SelectItem value="error" disabled>
+                Error loading categories
+              </SelectItem>
+            ) : (
+              categories
+                .filter((cat) => !category || cat.id !== category.id) // Don't allow self as parent
+                .filter((cat) => cat.id && cat.id.toString().trim() !== "") // Ensure valid ID
+                .map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id.toString()}>
+                    {cat.category_name || cat.name}
+                  </SelectItem>
+                ))
+            )}
+          </SelectContent>
+        </Select>
+        {errors.parent_category && (
+          <div className="flex items-center gap-1 text-sm text-red-600">
+            <AlertCircle className="w-4 h-4" />
+            {errors.parent_category}
+          </div>
+        )}
+        <p className="text-xs text-gray-500">
+          Select a parent category to create a subcategory, or leave as "No
+          Parent" for top-level categories
+        </p>
+      </div>
+
       {/* Category Image Upload */}
       <div className="space-y-2">
         <Label htmlFor="image">Category Image</Label>
@@ -212,20 +286,23 @@ export const CategoryForm = ({ category, onSubmit, onCancel, isLoading }) => {
             onChange={handleFileUpload}
             className={errors.image ? "border-red-500" : ""}
           />
-          {formData.image && (
+          {(formData.image || currentImageUrl) && (
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-600">
-                {typeof formData.image === "string"
+                {formData.image
+                  ? formData.image.name
+                  : currentImageUrl
                   ? "Current image"
-                  : formData.image.name}
+                  : ""}
               </span>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() =>
-                  setFormData((prev) => ({ ...prev, image: null }))
-                }
+                onClick={() => {
+                  setFormData((prev) => ({ ...prev, image: null }));
+                  setCurrentImageUrl(null);
+                }}
               >
                 Remove
               </Button>

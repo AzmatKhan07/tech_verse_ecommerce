@@ -91,16 +91,17 @@ export const useUpdateCategory = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }) => categoryService.updateCategory(id, data),
+    mutationFn: ({ slug, data }) => categoryService.updateCategory(slug, data),
     onSuccess: (updatedCategory, variables) => {
-      // Update the specific category in cache
-      queryClient.setQueryData(
-        categoryKeys.detail(variables.id),
-        updatedCategory
-      );
+      // Since we can't use slug as cache key, invalidate all detail queries
+      queryClient.removeQueries({ queryKey: categoryKeys.details() });
 
       // Invalidate categories list to refetch
       queryClient.invalidateQueries({ queryKey: categoryKeys.lists() });
+      // Invalidate KPIs to refetch updated statistics
+      queryClient.invalidateQueries({
+        queryKey: [...categoryKeys.all, "kpis"],
+      });
     },
     onError: (error) => {
       console.error("Error updating category:", error);
@@ -113,16 +114,17 @@ export const usePatchCategory = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }) => categoryService.patchCategory(id, data),
+    mutationFn: ({ slug, data }) => categoryService.patchCategory(slug, data),
     onSuccess: (updatedCategory, variables) => {
-      // Update the specific category in cache
-      queryClient.setQueryData(
-        categoryKeys.detail(variables.id),
-        updatedCategory
-      );
+      // Since we can't use slug as cache key, invalidate all detail queries
+      queryClient.removeQueries({ queryKey: categoryKeys.details() });
 
       // Invalidate categories list to refetch
       queryClient.invalidateQueries({ queryKey: categoryKeys.lists() });
+      // Invalidate KPIs to refetch updated statistics
+      queryClient.invalidateQueries({
+        queryKey: [...categoryKeys.all, "kpis"],
+      });
     },
     onError: (error) => {
       console.error("Error patching category:", error);
@@ -135,16 +137,30 @@ export const useDeleteCategory = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id) => categoryService.deleteCategory(id),
-    onSuccess: (_, deletedId) => {
-      // Remove the category from cache
-      queryClient.removeQueries({ queryKey: categoryKeys.detail(deletedId) });
+    mutationFn: (slug) => categoryService.deleteCategory(slug),
+    onSuccess: (_, deletedSlug) => {
+      // Remove the category from cache (we can't use slug as key, so invalidate all)
+      queryClient.removeQueries({ queryKey: categoryKeys.details() });
 
       // Invalidate categories list to refetch
       queryClient.invalidateQueries({ queryKey: categoryKeys.lists() });
+      // Invalidate KPIs to refetch updated statistics
+      queryClient.invalidateQueries({
+        queryKey: [...categoryKeys.all, "kpis"],
+      });
     },
     onError: (error) => {
       console.error("Error deleting category:", error);
     },
+  });
+};
+
+// Hook to fetch category KPIs/statistics
+export const useCategoryKPIs = () => {
+  return useQuery({
+    queryKey: [...categoryKeys.all, "kpis"],
+    queryFn: () => categoryService.getCategoryKPIs(),
+    staleTime: 5 * 60 * 1000, // 5 minutes - KPIs don't change frequently
+    refetchOnWindowFocus: false, // Don't refetch on window focus for KPIs
   });
 };
