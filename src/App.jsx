@@ -22,6 +22,7 @@ import { AdminProvider } from "./context/AdminContext";
 import { WishlistProvider } from "./context/WishlistContext";
 import AdminCategory from "./pages/AdminCategory";
 import { Toaster } from "./components/ui/toaster";
+import Brand from "./pages/Brand";
 
 function App() {
   return (
@@ -43,6 +44,7 @@ function App() {
               <Route path="/admin/add-product" element={<AddProduct />} />
               <Route path="/admin/orders" element={<AdminOrders />} />
               <Route path="/admin/orders/:orderId" element={<OrderDetails />} />
+              <Route path="/admin/brands" element={<Brand />} />
 
               {/* Main app routes with navbar/footer */}
               <Route

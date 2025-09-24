@@ -45,8 +45,6 @@ const AdminCategory = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
   const [filterActive, setFilterActive] = useState("All");
-  const [filterHome, setFilterHome] = useState("All");
-  const [filterProducts, setFilterProducts] = useState("All");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState(null);
 
@@ -65,7 +63,6 @@ const AdminCategory = () => {
     page_size: 20,
     ...(searchTerm && { search: searchTerm }),
     ...(filterActive !== "All" && { is_active: filterActive === "Active" }),
-    ...(filterHome !== "All" && { is_home: filterHome === "Home" }),
   };
 
   const {
@@ -82,18 +79,8 @@ const AdminCategory = () => {
     error: kpisError,
   } = useCategoryKPIs();
 
-  // Extract data from the query result and apply client-side filters
-  const allCategories = categoriesData?.categories || [];
-
-  // Apply client-side filtering for products filter
-  const categories = allCategories.filter((category) => {
-    if (filterProducts === "With Products") {
-      return (category.product_count || 0) > 0;
-    } else if (filterProducts === "Without Products") {
-      return (category.product_count || 0) === 0;
-    }
-    return true; // "All" - no filtering
-  });
+  // Extract data from the query result
+  const categories = categoriesData?.categories || [];
   const pagination = categoriesData?.pagination || {
     count: 0,
     totalPages: 1,
@@ -113,7 +100,7 @@ const AdminCategory = () => {
     }, 500);
 
     return () => clearTimeout(timeoutId);
-  }, [searchTerm, filterActive, filterHome, filterProducts]);
+  }, [searchTerm, filterActive]);
 
   const getStatusColor = (isActive) => {
     return isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800";
@@ -345,9 +332,9 @@ const AdminCategory = () => {
         {/* Filters */}
         <Card>
           <CardContent className="p-6">
-            <div className="space-y-4">
+            <div className="flex flex-col md:flex-row gap-4 items-end">
               {/* Search */}
-              <div className="relative">
+              <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <Input
                   placeholder="Search categories..."
@@ -357,82 +344,18 @@ const AdminCategory = () => {
                 />
               </div>
 
-              {/* Filter Row */}
-              <div className="flex flex-col sm:flex-row gap-4">
-                {/* Status Filter */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">
-                    Status
-                  </label>
-                  <Select value={filterActive} onValueChange={setFilterActive}>
-                    <SelectTrigger className="w-full sm:w-[160px]">
-                      <SelectValue placeholder="Filter by status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="All">All Status</SelectItem>
-                      <SelectItem value="Active">Active</SelectItem>
-                      <SelectItem value="Inactive">Inactive</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Home Category Filter */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">
-                    Home Category
-                  </label>
-                  <Select value={filterHome} onValueChange={setFilterHome}>
-                    <SelectTrigger className="w-full sm:w-[160px]">
-                      <SelectValue placeholder="Filter by home" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="All">All Categories</SelectItem>
-                      <SelectItem value="Home">Home Categories</SelectItem>
-                      <SelectItem value="Not Home">Not Home</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Products Filter */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">
-                    Products
-                  </label>
-                  <Select
-                    value={filterProducts}
-                    onValueChange={setFilterProducts}
-                  >
-                    <SelectTrigger className="w-full sm:w-[160px]">
-                      <SelectValue placeholder="Filter by products" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="All">All Categories</SelectItem>
-                      <SelectItem value="With Products">
-                        With Products
-                      </SelectItem>
-                      <SelectItem value="Without Products">
-                        Without Products
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Clear Filters Button */}
-                <div className="flex items-end">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setFilterActive("All");
-                      setFilterHome("All");
-                      setFilterProducts("All");
-                      setSearchTerm("");
-                    }}
-                    className="w-full sm:w-auto"
-                  >
-                    Clear Filters
-                  </Button>
-                </div>
+              {/* Status Filter */}
+              <div className="w-full md:w-[180px]">
+                <Select value={filterActive} onValueChange={setFilterActive}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All">All Status</SelectItem>
+                    <SelectItem value="Active">Active</SelectItem>
+                    <SelectItem value="Inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </CardContent>

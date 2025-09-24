@@ -8,6 +8,8 @@ import {
   Settings,
   LogOut,
   List,
+  Tag,
+  Grid,
 } from "lucide-react";
 import { useUser } from "@/context/UserContext";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -49,8 +51,15 @@ const AdminSidebar = ({ isOpen, onClose }) => {
     {
       id: "categories",
       label: "Categories",
-      icon: List,
+      icon: Grid,
       path: "/admin/categories",
+    },
+
+    {
+      id: "brand",
+      label: "Brands",
+      icon: Tag,
+      path: "/admin/brands",
     },
   ];
 
