@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
-import ColorForm from "@/components/admin/ColorForm";
+import SizeForm from "@/components/admin/SizeForm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,12 +22,12 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/lib/hooks/use-toast";
 import {
-  useColors,
-  useCreateColor,
-  useUpdateColor,
-  usePatchColor,
-  useDeleteColor,
-} from "@/lib/query/hooks/useColors";
+  useSizes,
+  useCreateSize,
+  useUpdateSize,
+  usePatchSize,
+  useDeleteSize,
+} from "@/lib/query/hooks/useSizes";
 import {
   Plus,
   Search,
@@ -35,106 +35,103 @@ import {
   Trash2,
   Eye,
   EyeOff,
-  Palette,
+  Ruler,
   TrendingUp,
   Activity,
-  Circle,
+  Hash,
 } from "lucide-react";
 
-const AdminColor = () => {
+const AdminSize = () => {
   const [showForm, setShowForm] = useState(false);
-  const [editingColor, setEditingColor] = useState(null);
+  const [editingSize, setEditingSize] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterActive, setFilterActive] = useState("All");
-  const [deleteDialog, setDeleteDialog] = useState({
-    open: false,
-    color: null,
-  });
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, size: null });
   const { toast } = useToast();
 
   // API hooks
   const {
-    data: colorsData,
+    data: sizesData,
     isLoading,
     error,
     refetch,
-  } = useColors({
+  } = useSizes({
     search: searchTerm || undefined,
-    ordering: "color",
+    ordering: "size",
     page_size: 50,
   });
 
-  const createColorMutation = useCreateColor();
-  const updateColorMutation = useUpdateColor();
-  const patchColorMutation = usePatchColor();
-  const deleteColorMutation = useDeleteColor();
+  const createSizeMutation = useCreateSize();
+  const updateSizeMutation = useUpdateSize();
+  const patchSizeMutation = usePatchSize();
+  const deleteSizeMutation = useDeleteSize();
 
-  // Filter colors based on status
-  const filteredColors =
-    colorsData?.results?.filter((color) => {
+  // Filter sizes based on status
+  const filteredSizes =
+    sizesData?.results?.filter((size) => {
       if (filterActive === "All") return true;
-      if (filterActive === "Active") return color.status;
-      if (filterActive === "Inactive") return !color.status;
+      if (filterActive === "Active") return size.status;
+      if (filterActive === "Inactive") return !size.status;
       return true;
     }) || [];
 
   // Statistics
-  const totalColors = colorsData?.count || 0;
-  const activeColors =
-    colorsData?.results?.filter((color) => color.status).length || 0;
-  const inactiveColors = totalColors - activeColors;
+  const totalSizes = sizesData?.count || 0;
+  const activeSizes =
+    sizesData?.results?.filter((size) => size.status).length || 0;
+  const inactiveSizes = totalSizes - activeSizes;
 
-  const handleCreateColor = () => {
-    setEditingColor(null);
+  const handleCreateSize = () => {
+    setEditingSize(null);
     setShowForm(true);
   };
 
-  const handleEditColor = (color) => {
-    setEditingColor(color);
+  const handleEditSize = (size) => {
+    setEditingSize(size);
     setShowForm(true);
   };
 
-  const handleDeleteColor = (color) => {
-    setDeleteDialog({ open: true, color });
+  const handleDeleteSize = (size) => {
+    setDeleteDialog({ open: true, size });
   };
 
   const confirmDelete = async () => {
-    if (!deleteDialog.color) return;
+    if (!deleteDialog.size) return;
 
     try {
-      await deleteColorMutation.mutateAsync(deleteDialog.color.id);
+      await deleteSizeMutation.mutateAsync(deleteDialog.size.id);
       toast({
-        title: "Color Deleted",
-        description: `${deleteDialog.color.color} has been deleted successfully.`,
+        title: "Size Deleted",
+        description: `${deleteDialog.size.size} has been deleted successfully.`,
         variant: "default",
       });
-      setDeleteDialog({ open: false, color: null });
+      setDeleteDialog({ open: false, size: null });
     } catch (error) {
       toast({
         title: "Error",
-        description: error.message || "Failed to delete color",
+        description: error.message || "Failed to delete size",
         variant: "destructive",
       });
     }
   };
 
-  const handleToggleColor = async (color) => {
+  const handleToggleSize = async (size) => {
     try {
-      await patchColorMutation.mutateAsync({
-        id: color.id,
-        colorData: { status: !color.status },
+      await patchSizeMutation.mutateAsync({
+        id: size.id,
+        sizeData: { status: !size.status },
       });
       toast({
-        title: "Color Status Updated",
-        description: `${color.color} has been ${
-          !color.status ? "activated" : "deactivated"
+        title: "Size Status Updated",
+        description: `${size.size} has been ${
+          !size.status ? "activated" : "deactivated"
         }.`,
         variant: "default",
       });
     } catch (error) {
       toast({
         title: "Error",
-        description: error.message || "Failed to update color status",
+        description: error.message || "Failed to update size status",
         variant: "destructive",
       });
     }
@@ -142,30 +139,30 @@ const AdminColor = () => {
 
   const handleFormSubmit = async (formData) => {
     try {
-      if (editingColor) {
-        await updateColorMutation.mutateAsync({
-          id: editingColor.id,
-          colorData: formData,
+      if (editingSize) {
+        await updateSizeMutation.mutateAsync({
+          id: editingSize.id,
+          sizeData: formData,
         });
         toast({
-          title: "Color Updated",
-          description: `${formData.color} has been updated successfully.`,
+          title: "Size Updated",
+          description: `${formData.size} has been updated successfully.`,
           variant: "default",
         });
       } else {
-        await createColorMutation.mutateAsync(formData);
+        await createSizeMutation.mutateAsync(formData);
         toast({
-          title: "Color Created",
-          description: `${formData.color} has been created successfully.`,
+          title: "Size Created",
+          description: `${formData.size} has been created successfully.`,
           variant: "default",
         });
       }
       setShowForm(false);
-      setEditingColor(null);
+      setEditingSize(null);
     } catch (error) {
       toast({
         title: "Error",
-        description: error.message || "Failed to save color",
+        description: error.message || "Failed to save size",
         variant: "destructive",
       });
     }
@@ -173,33 +170,7 @@ const AdminColor = () => {
 
   const handleFormCancel = () => {
     setShowForm(false);
-    setEditingColor(null);
-  };
-
-  // Helper function to get color preview
-  const getColorPreview = (colorName) => {
-    // Try to extract hex color from the name
-    const hexMatch = colorName.match(/#[0-9A-Fa-f]{6}/);
-    if (hexMatch) {
-      return hexMatch[0];
-    }
-
-    // Map common color names to hex values
-    const colorMap = {
-      red: "#FF0000",
-      blue: "#0000FF",
-      green: "#008000",
-      yellow: "#FFFF00",
-      orange: "#FFA500",
-      purple: "#800080",
-      pink: "#FFC0CB",
-      black: "#000000",
-      white: "#FFFFFF",
-      gray: "#808080",
-      grey: "#808080",
-    };
-
-    return colorMap[colorName.toLowerCase()] || "#808080";
+    setEditingSize(null);
   };
 
   if (error) {
@@ -208,7 +179,7 @@ const AdminColor = () => {
         <div className="p-6">
           <div className="text-center py-12">
             <div className="text-red-500 text-lg font-semibold mb-2">
-              Error Loading Colors
+              Error Loading Sizes
             </div>
             <p className="text-gray-600 mb-4">{error.message}</p>
             <Button onClick={() => refetch()}>Try Again</Button>
@@ -225,16 +196,16 @@ const AdminColor = () => {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
-              Color Management
+              Size Management
             </h1>
-            <p className="text-gray-600 mt-1">Manage your product colors</p>
+            <p className="text-gray-600 mt-1">Manage your product sizes</p>
           </div>
           <Button
-            onClick={handleCreateColor}
+            onClick={handleCreateSize}
             className="flex items-center gap-2"
           >
             <Plus className="h-4 w-4" />
-            Add Color
+            Add Size
           </Button>
         </div>
 
@@ -244,14 +215,14 @@ const AdminColor = () => {
             <CardContent className="p-6">
               <div className="flex items-center">
                 <div className="p-2 bg-blue-100 rounded-lg">
-                  <Palette className="h-6 w-6 text-blue-600" />
+                  <Ruler className="h-6 w-6 text-blue-600" />
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">
-                    Total Colors
+                    Total Sizes
                   </p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {totalColors}
+                    {totalSizes}
                   </p>
                 </div>
               </div>
@@ -266,10 +237,10 @@ const AdminColor = () => {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">
-                    Active Colors
+                    Active Sizes
                   </p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {activeColors}
+                    {activeSizes}
                   </p>
                 </div>
               </div>
@@ -284,10 +255,10 @@ const AdminColor = () => {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">
-                    Inactive Colors
+                    Inactive Sizes
                   </p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {inactiveColors}
+                    {inactiveSizes}
                   </p>
                 </div>
               </div>
@@ -298,15 +269,15 @@ const AdminColor = () => {
             <CardContent className="p-6">
               <div className="flex items-center">
                 <div className="p-2 bg-purple-100 rounded-lg">
-                  <Circle className="h-6 w-6 text-purple-600" />
+                  <Hash className="h-6 w-6 text-purple-600" />
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">
                     Active Rate
                   </p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {totalColors > 0
-                      ? Math.round((activeColors / totalColors) * 100)
+                    {totalSizes > 0
+                      ? Math.round((activeSizes / totalSizes) * 100)
                       : 0}
                     %
                   </p>
@@ -324,7 +295,7 @@ const AdminColor = () => {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <Input
-                  placeholder="Search colors..."
+                  placeholder="Search sizes..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -348,58 +319,53 @@ const AdminColor = () => {
           </CardContent>
         </Card>
 
-        {/* Colors List */}
+        {/* Sizes List */}
         <Card>
           <CardHeader>
-            <CardTitle>Colors ({filteredColors.length})</CardTitle>
+            <CardTitle>Sizes ({filteredSizes.length})</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? (
               <div className="text-center py-12">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                <p className="text-gray-600 mt-2">Loading colors...</p>
+                <p className="text-gray-600 mt-2">Loading sizes...</p>
               </div>
-            ) : filteredColors.length === 0 ? (
+            ) : filteredSizes.length === 0 ? (
               <div className="text-center py-12">
-                <Palette className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <Ruler className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  No colors found
+                  No sizes found
                 </h3>
                 <p className="text-gray-600 mb-4">
                   {searchTerm || filterActive !== "All"
                     ? "Try adjusting your search or filters"
-                    : "Get started by creating your first color"}
+                    : "Get started by creating your first size"}
                 </p>
                 {!searchTerm && filterActive === "All" && (
-                  <Button onClick={handleCreateColor}>
+                  <Button onClick={handleCreateSize}>
                     <Plus className="h-4 w-4 mr-2" />
-                    Create Color
+                    Create Size
                   </Button>
                 )}
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {filteredColors.map((color) => (
-                  <Card key={color.id} className="overflow-hidden">
+                {filteredSizes.map((size) => (
+                  <Card key={size.id} className="overflow-hidden">
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center space-x-3">
-                          <div
-                            className="w-12 h-12 rounded-lg border-2 border-gray-200 flex items-center justify-center"
-                            style={{
-                              backgroundColor: getColorPreview(color.color),
-                            }}
-                          >
-                            <Circle className="h-6 w-6 text-white drop-shadow-sm" />
+                          <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                            <Hash className="h-6 w-6 text-gray-600" />
                           </div>
                           <div>
-                            <h3 className="font-semibold text-gray-900">
-                              {color.color}
+                            <h3 className="font-semibold text-gray-900 text-lg">
+                              {size.size}
                             </h3>
                             <Badge
-                              variant={color.status ? "default" : "secondary"}
+                              variant={size.status ? "default" : "secondary"}
                             >
-                              {color.status ? "Active" : "Inactive"}
+                              {size.status ? "Active" : "Inactive"}
                             </Badge>
                           </div>
                         </div>
@@ -410,16 +376,16 @@ const AdminColor = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleEditColor(color)}
+                            onClick={() => handleEditSize(size)}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleToggleColor(color)}
+                            onClick={() => handleToggleSize(size)}
                           >
-                            {color.status ? (
+                            {size.status ? (
                               <EyeOff className="h-4 w-4" />
                             ) : (
                               <Eye className="h-4 w-4" />
@@ -428,7 +394,7 @@ const AdminColor = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleDeleteColor(color)}
+                            onClick={() => handleDeleteSize(size)}
                             className="text-red-600 hover:text-red-700"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -443,26 +409,26 @@ const AdminColor = () => {
           </CardContent>
         </Card>
 
-        {/* Color Form Dialog */}
+        {/* Size Form Dialog */}
         {showForm && (
           <Dialog open={showForm} onOpenChange={setShowForm}>
             <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>
-                  {editingColor ? "Edit Color" : "Create New Color"}
+                  {editingSize ? "Edit Size" : "Create New Size"}
                 </DialogTitle>
                 <DialogDescription>
-                  {editingColor
-                    ? "Update the color information below."
-                    : "Fill in the details to create a new color."}
+                  {editingSize
+                    ? "Update the size information below."
+                    : "Fill in the details to create a new size."}
                 </DialogDescription>
               </DialogHeader>
-              <ColorForm
-                color={editingColor}
+              <SizeForm
+                size={editingSize}
                 onSubmit={handleFormSubmit}
                 onCancel={handleFormCancel}
                 isLoading={
-                  createColorMutation.isPending || updateColorMutation.isPending
+                  createSizeMutation.isPending || updateSizeMutation.isPending
                 }
               />
             </DialogContent>
@@ -472,30 +438,30 @@ const AdminColor = () => {
         {/* Delete Confirmation Dialog */}
         <Dialog
           open={deleteDialog.open}
-          onOpenChange={(open) => setDeleteDialog({ open, color: null })}
+          onOpenChange={(open) => setDeleteDialog({ open, size: null })}
         >
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Delete Color</DialogTitle>
+              <DialogTitle>Delete Size</DialogTitle>
               <DialogDescription>
-                Are you sure you want to delete "{deleteDialog.color?.color}"?
+                Are you sure you want to delete "{deleteDialog.size?.size}"?
                 This action cannot be undone.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
               <Button
                 variant="outline"
-                onClick={() => setDeleteDialog({ open: false, color: null })}
-                disabled={deleteColorMutation.isPending}
+                onClick={() => setDeleteDialog({ open: false, size: null })}
+                disabled={deleteSizeMutation.isPending}
               >
                 Cancel
               </Button>
               <Button
                 variant="destructive"
                 onClick={confirmDelete}
-                disabled={deleteColorMutation.isPending}
+                disabled={deleteSizeMutation.isPending}
               >
-                {deleteColorMutation.isPending ? "Deleting..." : "Delete"}
+                {deleteSizeMutation.isPending ? "Deleting..." : "Delete"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -505,4 +471,4 @@ const AdminColor = () => {
   );
 };
 
-export default AdminColor;
+export default AdminSize;

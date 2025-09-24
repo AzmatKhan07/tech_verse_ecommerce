@@ -17,19 +17,8 @@ export const useProducts = (params = {}) => {
     queryFn: () => productService.getProducts(params),
     keepPreviousData: true, // Keep previous data while fetching new data
     select: (data) => {
-      // Transform the data if needed
-      return {
-        products: data.results || data,
-        pagination: {
-          count: data.count || data.length,
-          totalPages:
-            data.total_pages ||
-            Math.ceil((data.count || data.length) / (params.page_size || 20)),
-          currentPage: params.page || 1,
-          hasNext: !!data.next,
-          hasPrevious: !!data.previous,
-        },
-      };
+      // The ProductService already transforms the data, so we can return it as-is
+      return data;
     },
   });
 };
@@ -124,11 +113,11 @@ export const useUpdateProduct = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }) => productService.updateProduct(id, data),
+    mutationFn: ({ slug, data }) => productService.updateProduct(slug, data),
     onSuccess: (updatedProduct, variables) => {
       // Update the specific product in cache
       queryClient.setQueryData(
-        productKeys.detail(variables.id),
+        productKeys.detail(variables.slug),
         updatedProduct
       );
 
@@ -146,11 +135,11 @@ export const usePatchProduct = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }) => productService.patchProduct(id, data),
+    mutationFn: ({ slug, data }) => productService.patchProduct(slug, data),
     onSuccess: (updatedProduct, variables) => {
       // Update the specific product in cache
       queryClient.setQueryData(
-        productKeys.detail(variables.id),
+        productKeys.detail(variables.slug),
         updatedProduct
       );
 

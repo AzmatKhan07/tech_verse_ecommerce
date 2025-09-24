@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
-import ColorForm from "@/components/admin/ColorForm";
+import BannerForm from "@/components/admin/BannerForm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,12 +22,12 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/lib/hooks/use-toast";
 import {
-  useColors,
-  useCreateColor,
-  useUpdateColor,
-  usePatchColor,
-  useDeleteColor,
-} from "@/lib/query/hooks/useColors";
+  useBanners,
+  useCreateBanner,
+  useUpdateBanner,
+  usePatchBanner,
+  useDeleteBanner,
+} from "@/lib/query/hooks/useBanners";
 import {
   Plus,
   Search,
@@ -35,106 +35,106 @@ import {
   Trash2,
   Eye,
   EyeOff,
-  Palette,
+  Image,
   TrendingUp,
   Activity,
-  Circle,
+  ExternalLink,
 } from "lucide-react";
 
-const AdminColor = () => {
+const AdminHomeBanner = () => {
   const [showForm, setShowForm] = useState(false);
-  const [editingColor, setEditingColor] = useState(null);
+  const [editingBanner, setEditingBanner] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterActive, setFilterActive] = useState("All");
+  const [filterStatus, setFilterStatus] = useState("All");
   const [deleteDialog, setDeleteDialog] = useState({
     open: false,
-    color: null,
+    banner: null,
   });
   const { toast } = useToast();
 
   // API hooks
   const {
-    data: colorsData,
+    data: bannersData,
     isLoading,
     error,
     refetch,
-  } = useColors({
+  } = useBanners({
     search: searchTerm || undefined,
-    ordering: "color",
+    ordering: "-created_at",
     page_size: 50,
   });
 
-  const createColorMutation = useCreateColor();
-  const updateColorMutation = useUpdateColor();
-  const patchColorMutation = usePatchColor();
-  const deleteColorMutation = useDeleteColor();
+  const createBannerMutation = useCreateBanner();
+  const updateBannerMutation = useUpdateBanner();
+  const patchBannerMutation = usePatchBanner();
+  const deleteBannerMutation = useDeleteBanner();
 
-  // Filter colors based on status
-  const filteredColors =
-    colorsData?.results?.filter((color) => {
-      if (filterActive === "All") return true;
-      if (filterActive === "Active") return color.status;
-      if (filterActive === "Inactive") return !color.status;
+  // Filter banners based on status
+  const filteredBanners =
+    bannersData?.banners?.filter((banner) => {
+      if (filterStatus === "All") return true;
+      if (filterStatus === "Active") return banner.status;
+      if (filterStatus === "Inactive") return !banner.status;
       return true;
     }) || [];
 
   // Statistics
-  const totalColors = colorsData?.count || 0;
-  const activeColors =
-    colorsData?.results?.filter((color) => color.status).length || 0;
-  const inactiveColors = totalColors - activeColors;
+  const totalBanners = bannersData?.count || 0;
+  const activeBanners =
+    bannersData?.banners?.filter((banner) => banner.status).length || 0;
+  const inactiveBanners = totalBanners - activeBanners;
 
-  const handleCreateColor = () => {
-    setEditingColor(null);
+  const handleCreateBanner = () => {
+    setEditingBanner(null);
     setShowForm(true);
   };
 
-  const handleEditColor = (color) => {
-    setEditingColor(color);
+  const handleEditBanner = (banner) => {
+    setEditingBanner(banner);
     setShowForm(true);
   };
 
-  const handleDeleteColor = (color) => {
-    setDeleteDialog({ open: true, color });
+  const handleDeleteBanner = (banner) => {
+    setDeleteDialog({ open: true, banner });
   };
 
   const confirmDelete = async () => {
-    if (!deleteDialog.color) return;
+    if (!deleteDialog.banner) return;
 
     try {
-      await deleteColorMutation.mutateAsync(deleteDialog.color.id);
+      await deleteBannerMutation.mutateAsync(deleteDialog.banner.id);
       toast({
-        title: "Color Deleted",
-        description: `${deleteDialog.color.color} has been deleted successfully.`,
+        title: "Banner Deleted",
+        description: `Banner has been deleted successfully.`,
         variant: "default",
       });
-      setDeleteDialog({ open: false, color: null });
+      setDeleteDialog({ open: false, banner: null });
     } catch (error) {
       toast({
         title: "Error",
-        description: error.message || "Failed to delete color",
+        description: error.message || "Failed to delete banner",
         variant: "destructive",
       });
     }
   };
 
-  const handleToggleColor = async (color) => {
+  const handleToggleBanner = async (banner) => {
     try {
-      await patchColorMutation.mutateAsync({
-        id: color.id,
-        colorData: { status: !color.status },
+      await patchBannerMutation.mutateAsync({
+        id: banner.id,
+        data: { status: !banner.status },
       });
       toast({
-        title: "Color Status Updated",
-        description: `${color.color} has been ${
-          !color.status ? "activated" : "deactivated"
+        title: "Banner Status Updated",
+        description: `Banner has been ${
+          !banner.status ? "activated" : "deactivated"
         }.`,
         variant: "default",
       });
     } catch (error) {
       toast({
         title: "Error",
-        description: error.message || "Failed to update color status",
+        description: error.message || "Failed to update banner status",
         variant: "destructive",
       });
     }
@@ -142,30 +142,30 @@ const AdminColor = () => {
 
   const handleFormSubmit = async (formData) => {
     try {
-      if (editingColor) {
-        await updateColorMutation.mutateAsync({
-          id: editingColor.id,
-          colorData: formData,
+      if (editingBanner) {
+        await updateBannerMutation.mutateAsync({
+          id: editingBanner.id,
+          data: formData,
         });
         toast({
-          title: "Color Updated",
-          description: `${formData.color} has been updated successfully.`,
+          title: "Banner Updated",
+          description: `Banner has been updated successfully.`,
           variant: "default",
         });
       } else {
-        await createColorMutation.mutateAsync(formData);
+        await createBannerMutation.mutateAsync(formData);
         toast({
-          title: "Color Created",
-          description: `${formData.color} has been created successfully.`,
+          title: "Banner Created",
+          description: `Banner has been created successfully.`,
           variant: "default",
         });
       }
       setShowForm(false);
-      setEditingColor(null);
+      setEditingBanner(null);
     } catch (error) {
       toast({
         title: "Error",
-        description: error.message || "Failed to save color",
+        description: error.message || "Failed to save banner",
         variant: "destructive",
       });
     }
@@ -173,33 +173,7 @@ const AdminColor = () => {
 
   const handleFormCancel = () => {
     setShowForm(false);
-    setEditingColor(null);
-  };
-
-  // Helper function to get color preview
-  const getColorPreview = (colorName) => {
-    // Try to extract hex color from the name
-    const hexMatch = colorName.match(/#[0-9A-Fa-f]{6}/);
-    if (hexMatch) {
-      return hexMatch[0];
-    }
-
-    // Map common color names to hex values
-    const colorMap = {
-      red: "#FF0000",
-      blue: "#0000FF",
-      green: "#008000",
-      yellow: "#FFFF00",
-      orange: "#FFA500",
-      purple: "#800080",
-      pink: "#FFC0CB",
-      black: "#000000",
-      white: "#FFFFFF",
-      gray: "#808080",
-      grey: "#808080",
-    };
-
-    return colorMap[colorName.toLowerCase()] || "#808080";
+    setEditingBanner(null);
   };
 
   if (error) {
@@ -208,7 +182,7 @@ const AdminColor = () => {
         <div className="p-6">
           <div className="text-center py-12">
             <div className="text-red-500 text-lg font-semibold mb-2">
-              Error Loading Colors
+              Error Loading Banners
             </div>
             <p className="text-gray-600 mb-4">{error.message}</p>
             <Button onClick={() => refetch()}>Try Again</Button>
@@ -225,16 +199,16 @@ const AdminColor = () => {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
-              Color Management
+              Home Banner Management
             </h1>
-            <p className="text-gray-600 mt-1">Manage your product colors</p>
+            <p className="text-gray-600 mt-1">Manage your home page banners</p>
           </div>
           <Button
-            onClick={handleCreateColor}
+            onClick={handleCreateBanner}
             className="flex items-center gap-2"
           >
             <Plus className="h-4 w-4" />
-            Add Color
+            Add Banner
           </Button>
         </div>
 
@@ -244,14 +218,14 @@ const AdminColor = () => {
             <CardContent className="p-6">
               <div className="flex items-center">
                 <div className="p-2 bg-blue-100 rounded-lg">
-                  <Palette className="h-6 w-6 text-blue-600" />
+                  <Image className="h-6 w-6 text-blue-600" />
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">
-                    Total Colors
+                    Total Banners
                   </p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {totalColors}
+                    {totalBanners}
                   </p>
                 </div>
               </div>
@@ -266,10 +240,10 @@ const AdminColor = () => {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">
-                    Active Colors
+                    Active Banners
                   </p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {activeColors}
+                    {activeBanners}
                   </p>
                 </div>
               </div>
@@ -284,10 +258,10 @@ const AdminColor = () => {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">
-                    Inactive Colors
+                    Inactive Banners
                   </p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {inactiveColors}
+                    {inactiveBanners}
                   </p>
                 </div>
               </div>
@@ -298,15 +272,15 @@ const AdminColor = () => {
             <CardContent className="p-6">
               <div className="flex items-center">
                 <div className="p-2 bg-purple-100 rounded-lg">
-                  <Circle className="h-6 w-6 text-purple-600" />
+                  <ExternalLink className="h-6 w-6 text-purple-600" />
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">
                     Active Rate
                   </p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {totalColors > 0
-                      ? Math.round((activeColors / totalColors) * 100)
+                    {totalBanners > 0
+                      ? Math.round((activeBanners / totalBanners) * 100)
                       : 0}
                     %
                   </p>
@@ -324,7 +298,7 @@ const AdminColor = () => {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <Input
-                  placeholder="Search colors..."
+                  placeholder="Search banners..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -333,7 +307,7 @@ const AdminColor = () => {
 
               {/* Status Filter */}
               <div className="w-full md:w-[180px]">
-                <Select value={filterActive} onValueChange={setFilterActive}>
+                <Select value={filterStatus} onValueChange={setFilterStatus}>
                   <SelectTrigger>
                     <SelectValue placeholder="Filter by status" />
                   </SelectTrigger>
@@ -348,91 +322,114 @@ const AdminColor = () => {
           </CardContent>
         </Card>
 
-        {/* Colors List */}
+        {/* Banners List */}
         <Card>
           <CardHeader>
-            <CardTitle>Colors ({filteredColors.length})</CardTitle>
+            <CardTitle>Banners ({filteredBanners.length})</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? (
               <div className="text-center py-12">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                <p className="text-gray-600 mt-2">Loading colors...</p>
+                <p className="text-gray-600 mt-2">Loading banners...</p>
               </div>
-            ) : filteredColors.length === 0 ? (
+            ) : filteredBanners.length === 0 ? (
               <div className="text-center py-12">
-                <Palette className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <Image className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  No colors found
+                  No banners found
                 </h3>
                 <p className="text-gray-600 mb-4">
-                  {searchTerm || filterActive !== "All"
+                  {searchTerm || filterStatus !== "All"
                     ? "Try adjusting your search or filters"
-                    : "Get started by creating your first color"}
+                    : "Get started by creating your first banner"}
                 </p>
-                {!searchTerm && filterActive === "All" && (
-                  <Button onClick={handleCreateColor}>
+                {!searchTerm && filterStatus === "All" && (
+                  <Button onClick={handleCreateBanner}>
                     <Plus className="h-4 w-4 mr-2" />
-                    Create Color
+                    Create Banner
                   </Button>
                 )}
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {filteredColors.map((color) => (
-                  <Card key={color.id} className="overflow-hidden">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredBanners.map((banner) => (
+                  <Card key={banner.id} className="overflow-hidden">
                     <CardContent className="p-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center space-x-3">
-                          <div
-                            className="w-12 h-12 rounded-lg border-2 border-gray-200 flex items-center justify-center"
-                            style={{
-                              backgroundColor: getColorPreview(color.color),
+                      <div className="space-y-4">
+                        {/* Banner Image */}
+                        <div className="relative">
+                          <img
+                            src={banner.image || "/placeholder-banner.jpg"}
+                            alt="Banner"
+                            className="w-full h-32 object-cover rounded-lg"
+                            onError={(e) => {
+                              e.target.src = "/placeholder-banner.jpg";
                             }}
+                          />
+                          <Badge
+                            className={`absolute top-2 right-2 ${
+                              banner.status
+                                ? "bg-green-100 text-green-800"
+                                : "bg-gray-100 text-gray-800"
+                            }`}
                           >
-                            <Circle className="h-6 w-6 text-white drop-shadow-sm" />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold text-gray-900">
-                              {color.color}
-                            </h3>
-                            <Badge
-                              variant={color.status ? "default" : "secondary"}
-                            >
-                              {color.status ? "Active" : "Inactive"}
-                            </Badge>
-                          </div>
+                            {banner.status ? "Active" : "Inactive"}
+                          </Badge>
                         </div>
-                      </div>
 
-                      <div className="flex items-center justify-between">
-                        <div className="flex space-x-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEditColor(color)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleToggleColor(color)}
-                          >
-                            {color.status ? (
-                              <EyeOff className="h-4 w-4" />
-                            ) : (
-                              <Eye className="h-4 w-4" />
-                            )}
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDeleteColor(color)}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                        {/* Banner Details */}
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-xs"
+                              disabled
+                            >
+                              {banner.btn_txt}
+                            </Button>
+                            <ExternalLink className="h-3 w-3 text-gray-400" />
+                          </div>
+                          <p className="text-xs text-gray-500 truncate">
+                            {banner.btn_link}
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            Created:{" "}
+                            {new Date(banner.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center justify-between pt-2">
+                          <div className="flex space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEditBanner(banner)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleToggleBanner(banner)}
+                            >
+                              {banner.status ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDeleteBanner(banner)}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </CardContent>
@@ -443,26 +440,27 @@ const AdminColor = () => {
           </CardContent>
         </Card>
 
-        {/* Color Form Dialog */}
+        {/* Banner Form Dialog */}
         {showForm && (
           <Dialog open={showForm} onOpenChange={setShowForm}>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle>
-                  {editingColor ? "Edit Color" : "Create New Color"}
+                  {editingBanner ? "Edit Banner" : "Create New Banner"}
                 </DialogTitle>
                 <DialogDescription>
-                  {editingColor
-                    ? "Update the color information below."
-                    : "Fill in the details to create a new color."}
+                  {editingBanner
+                    ? "Update the banner information below."
+                    : "Fill in the details to create a new banner."}
                 </DialogDescription>
               </DialogHeader>
-              <ColorForm
-                color={editingColor}
+              <BannerForm
+                banner={editingBanner}
                 onSubmit={handleFormSubmit}
                 onCancel={handleFormCancel}
                 isLoading={
-                  createColorMutation.isPending || updateColorMutation.isPending
+                  createBannerMutation.isPending ||
+                  updateBannerMutation.isPending
                 }
               />
             </DialogContent>
@@ -472,30 +470,30 @@ const AdminColor = () => {
         {/* Delete Confirmation Dialog */}
         <Dialog
           open={deleteDialog.open}
-          onOpenChange={(open) => setDeleteDialog({ open, color: null })}
+          onOpenChange={(open) => setDeleteDialog({ open, banner: null })}
         >
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Delete Color</DialogTitle>
+              <DialogTitle>Delete Banner</DialogTitle>
               <DialogDescription>
-                Are you sure you want to delete "{deleteDialog.color?.color}"?
-                This action cannot be undone.
+                Are you sure you want to delete this banner? This action cannot
+                be undone.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
               <Button
                 variant="outline"
-                onClick={() => setDeleteDialog({ open: false, color: null })}
-                disabled={deleteColorMutation.isPending}
+                onClick={() => setDeleteDialog({ open: false, banner: null })}
+                disabled={deleteBannerMutation.isPending}
               >
                 Cancel
               </Button>
               <Button
                 variant="destructive"
                 onClick={confirmDelete}
-                disabled={deleteColorMutation.isPending}
+                disabled={deleteBannerMutation.isPending}
               >
-                {deleteColorMutation.isPending ? "Deleting..." : "Delete"}
+                {deleteBannerMutation.isPending ? "Deleting..." : "Delete"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -505,4 +503,4 @@ const AdminColor = () => {
   );
 };
 
-export default AdminColor;
+export default AdminHomeBanner;

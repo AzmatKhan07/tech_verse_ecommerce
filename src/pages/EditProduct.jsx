@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +14,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/lib/hooks/use-toast";
-import { useCreateProduct } from "@/lib/query/hooks/useProducts";
+import {
+  useProduct,
+  useUpdateProduct,
+  usePatchProduct,
+} from "@/lib/query/hooks/useProducts";
 import { useBrands } from "@/lib/query/hooks/useBrands";
 import { useCategories } from "@/lib/query/hooks/useCategories";
 import { useTaxes } from "@/lib/query/hooks/useTaxes";
@@ -28,15 +33,29 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import AdminLayout from "@/components/admin/AdminLayout";
 
-const AddProduct = () => {
+const EditProduct = () => {
+  const { slug } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  console.log("🔍 EditProduct - slug from URL:", slug);
+
   // API hooks
-  const createProductMutation = useCreateProduct();
+  const {
+    data: product,
+    isLoading: productLoading,
+    error: productError,
+  } = useProduct(slug);
+
+  console.log("🔍 useProduct hook result:", {
+    product,
+    productLoading,
+    productError,
+    slug,
+  });
+  const updateProductMutation = usePatchProduct();
   const { data: brandsData, isLoading: brandsLoading } = useBrands({
     page_size: 100,
     status: true,
@@ -78,7 +97,7 @@ const AddProduct = () => {
     is_arrival: false,
     status: true,
     image: null,
-    images: [{ image: null }],
+    images: [],
     attributes: [
       {
         sku: "",
@@ -95,18 +114,6 @@ const AddProduct = () => {
   const [errors, setErrors] = useState({});
   const [imagePreview, setImagePreview] = useState(null);
   const [imagePreviews, setImagePreviews] = useState([]);
-  console.log("🔍 AddProduct - FormData:", formData);
-  // Debug formData state changes
-  useEffect(() => {
-    console.log("🔍 AddProduct - FormData state changed:", formData);
-    console.log("🔍 AddProduct - Attributes:", formData.attributes);
-    console.log("🔍 AddProduct - Images structure:", formData.images);
-    console.log(
-      "🔍 AddProduct - Images with files:",
-      formData.images.filter((img) => img.image !== null)
-    );
-    console.log("🔍 AddProduct - Main image:", formData.image);
-  }, [formData]);
 
   // Extract data from API responses
   const brands = brandsData?.results || [];
@@ -114,6 +121,156 @@ const AddProduct = () => {
   const taxes = taxesData?.results || [];
   const colors = colorsData?.results || [];
   const sizes = sizesData?.results || [];
+
+  // Debug dropdown data
+  console.log("🔍 Brands data:", brands);
+  console.log("🔍 Categories data:", categories);
+  console.log("🔍 Taxes data:", taxes);
+  console.log("🔍 Colors data:", colors);
+  console.log("🔍 Sizes data:", sizes);
+
+  // Load product data when it's available
+  useEffect(() => {
+    if (product && brands.length > 0 && categories.length > 0) {
+      console.log("🔍 Product data received:", product);
+      console.log("🔍 Product category:", product.category);
+      console.log("🔍 Product brand:", product.brand);
+      console.log("🔍 Product attributes:", product.attributes);
+      console.log("🔍 Product images:", product.images);
+      console.log("🔍 Product tax:", product.tax);
+      console.log("🔍 Product status:", product.status);
+      console.log("🔍 Product flags:", {
+        is_promo: product.is_promo,
+        is_featured: product.is_featured,
+        is_discounted: product.is_discounted,
+        is_tranding: product.is_tranding,
+        is_arrival: product.is_arrival,
+      });
+
+      // Map data according to the exact API structure
+      const categoryValue = product.category?.toString() || "";
+      const brandValue = product.brand?.toString() || "";
+      const taxValue = product.tax?.toString() || "";
+
+      console.log("🔍 Mapped values from API structure:", {
+        categoryValue,
+        brandValue,
+        taxValue,
+        originalCategory: product.category,
+        originalBrand: product.brand,
+        originalTax: product.tax,
+      });
+
+      setFormData({
+        category: categoryValue,
+        name: product.name || "",
+        brand: brandValue,
+        model: product.model || "",
+        short_desc: product.short_desc || "",
+        desc: product.desc || "",
+        keywords: product.keywords || "",
+        technical_specification: product.technical_specification || "",
+        uses: product.uses || "",
+        warranty: product.warranty || "",
+        lead_time: product.lead_time || "",
+        tax: taxValue,
+        is_promo: product.is_promo || false,
+        is_featured: product.is_featured || false,
+        is_discounted: product.is_discounted || false,
+        is_tranding: product.is_tranding || false,
+        is_arrival: product.is_arrival || false,
+        status: product.status !== undefined ? product.status : true,
+        image: null, // Don't pre-fill image for editing
+        images: [], // Don't pre-fill additional images
+        attributes:
+          product.attributes && product.attributes.length > 0
+            ? product.attributes.map((attr, index) => {
+                const mappedAttr = {
+                  sku: attr.sku || "",
+                  attr_image: null, // Don't pre-fill attribute images
+                  mrp: attr.mrp?.toString() || "",
+                  price: attr.price?.toString() || "",
+                  qty: attr.qty?.toString() || "",
+                  size: attr.size?.toString() || "",
+                  color: attr.color?.toString() || "",
+                };
+                console.log(`🔍 Mapped attribute ${index}:`, mappedAttr);
+                return mappedAttr;
+              })
+            : [
+                {
+                  sku: "",
+                  attr_image: null,
+                  mrp: "",
+                  price: "",
+                  qty: "",
+                  size: "",
+                  color: "",
+                },
+              ],
+      });
+
+      // Set image previews
+      if (product.image) {
+        setImagePreview(product.image);
+      }
+      if (product.images && product.images.length > 0) {
+        setImagePreviews(product.images.map((img) => img.image || img));
+      }
+
+      // Debug form data after setting
+      console.log("🔍 Form data set with API structure:", {
+        category: categoryValue,
+        brand: brandValue,
+        tax: taxValue,
+        attributes: formData.attributes,
+        images: product.images,
+        mainImage: product.image,
+      });
+
+      // Additional debugging for dropdown options
+      console.log(
+        "🔍 Available brands for dropdown:",
+        brands.map((b) => ({ id: b.id, name: b.name }))
+      );
+      console.log(
+        "🔍 Available categories for dropdown:",
+        categories.map((c) => ({ id: c.id, name: c.category_name }))
+      );
+      console.log(
+        "🔍 Available taxes for dropdown:",
+        taxes.map((t) => ({ id: t.id, name: t.tax_desc }))
+      );
+      console.log(
+        "🔍 Available sizes for dropdown:",
+        sizes.map((s) => ({ id: s.id, name: s.size }))
+      );
+      console.log(
+        "🔍 Available colors for dropdown:",
+        colors.map((c) => ({ id: c.id, name: c.color }))
+      );
+
+      // Check if the selected values exist in the dropdown options
+      const selectedBrand = brands.find((b) => b.id.toString() === brandValue);
+      const selectedCategory = categories.find(
+        (c) => c.id.toString() === categoryValue
+      );
+      const selectedTax = taxes.find((t) => t.id.toString() === taxValue);
+
+      console.log("🔍 Selected brand found:", selectedBrand);
+      console.log("🔍 Selected category found:", selectedCategory);
+      console.log("🔍 Selected tax found:", selectedTax);
+    }
+  }, [product, brands, categories, taxes, colors, sizes]);
+
+  // Debug formData state changes
+  useEffect(() => {
+    console.log("🔍 FormData state changed:", formData);
+    console.log("🔍 FormData category value:", formData.category);
+    console.log("🔍 FormData brand value:", formData.brand);
+    console.log("🔍 FormData tax value:", formData.tax);
+    console.log("🔍 FormData attributes:", formData.attributes);
+  }, [formData]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -221,10 +378,10 @@ const AddProduct = () => {
         return;
       }
 
-      // Add file to images array with the new structure
+      // Add file to images array
       setFormData((prev) => ({
         ...prev,
-        images: [...prev.images, { image: file }],
+        images: [...prev.images, file],
       }));
 
       // Create preview
@@ -328,10 +485,6 @@ const AddProduct = () => {
       newErrors.desc = "Description is required";
     }
 
-    if (!formData.image) {
-      newErrors.image = "Main product image is required";
-    }
-
     // Validate attributes
     formData.attributes.forEach((attr, index) => {
       if (!attr.sku.trim()) {
@@ -383,26 +536,32 @@ const AddProduct = () => {
       submitData.append("is_tranding", formData.is_tranding);
       submitData.append("is_arrival", formData.is_arrival);
       submitData.append("status", formData.status);
-      // Add main image
+
+      // Add main image - only if a new file was uploaded
       if (formData.image) {
+        // New file uploaded
         submitData.append("image", formData.image);
+        console.log("🔍 Sending new image file:", formData.image.name);
+      } else {
+        console.log("🔍 No new image uploaded, preserving existing image");
+        // If the API requires an image field, we might need to handle this differently
+        // For now, we'll try without sending the image field
       }
 
-      // Add additional images with the new structure
-      const additionalImages = formData.images
-        .filter((img) => img.image !== null) // Filter out null images
-        .map((img) => ({ image: img.image }));
-
-      if (additionalImages.length > 0) {
-        submitData.append("images", JSON.stringify(additionalImages));
+      // Add additional images - only new files
+      if (formData.images.length > 0) {
+        formData.images.forEach((image) => {
+          submitData.append("images", image);
+        });
+        console.log(
+          "🔍 Sending new additional images:",
+          formData.images.length
+        );
+      } else {
+        console.log(
+          "🔍 No new additional images uploaded, preserving existing images"
+        );
       }
-      // Add slug (auto-generated from name)
-      const slug = formData.name
-        .trim()
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/(^-|-$)/g, "");
-      submitData.append("slug", slug);
 
       // Add attributes as JSON
       const attributesData = formData.attributes.map((attr) => ({
@@ -412,44 +571,92 @@ const AddProduct = () => {
         qty: parseInt(attr.qty),
         size: attr.size ? parseInt(attr.size) : null,
         color: attr.color ? parseInt(attr.color) : null,
-        attr_image: attr.attr_image || null, // Include attr_image field
       }));
 
       submitData.append("attributes", JSON.stringify(attributesData));
 
       // Debug: Log FormData contents
-      console.log("🔗 AddProduct - FormData contents:");
+      console.log("FormData contents:");
       for (let [key, value] of submitData.entries()) {
         console.log(`${key}:`, value);
       }
 
-      // Debug: Log attributes data specifically
-      console.log("🔗 AddProduct - Attributes data:", attributesData);
-      console.log("🔗 AddProduct - Images count:", formData.images.length);
-      console.log("🔗 AddProduct - Additional images:", additionalImages);
-      console.log(
-        "🔗 AddProduct - Main image:",
-        formData.image ? formData.image.name : "No main image"
-      );
+      // Debug: Log image handling
+      console.log("🔍 Image handling debug:");
+      console.log("formData.image:", formData.image);
+      console.log("product.image:", product.image);
+      console.log("formData.images:", formData.images);
+      console.log("product.images:", product.images);
 
-      await createProductMutation.mutateAsync(submitData);
+      await updateProductMutation.mutateAsync({ slug, data: submitData });
 
       toast({
-        title: "Product Created",
-        description: `${formData.name} has been created successfully.`,
+        title: "Product Updated",
+        description: `${formData.name} has been updated successfully.`,
         variant: "default",
       });
 
       navigate("/admin/products");
     } catch (error) {
-      console.error("Error creating product:", error);
+      console.error("Error updating product:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to create product",
+        description: error.message || "Failed to update product",
         variant: "destructive",
       });
     }
   };
+
+  if (productLoading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
+            <p className="text-gray-600">Loading product...</p>
+          </div>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  if (productError) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="text-red-500 text-lg font-semibold mb-2">
+              Error Loading Product
+            </div>
+            <p className="text-gray-600 mb-4">{productError.message}</p>
+            <Button onClick={() => navigate("/admin/products")}>
+              Back to Products
+            </Button>
+          </div>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  if (!product) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="text-gray-500 text-lg font-semibold mb-2">
+              Product Not Found
+            </div>
+            <p className="text-gray-600 mb-4">
+              The requested product could not be found.
+            </p>
+            <Button onClick={() => navigate("/admin/products")}>
+              Back to Products
+            </Button>
+          </div>
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout>
@@ -467,10 +674,10 @@ const AddProduct = () => {
           </Button>
           <div>
             <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">
-              Add Product
+              Edit Product
             </h1>
             <p className="text-gray-600 mt-1">
-              Create a new product for your inventory
+              Update product information and settings
             </p>
           </div>
         </div>
@@ -965,7 +1172,7 @@ const AddProduct = () => {
                     <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
                       <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                       <p className="text-gray-600 mb-2">
-                        Upload main product image
+                        Upload new main product image
                       </p>
                       <p className="text-sm text-gray-500 mb-4">
                         JPG, PNG or GIF (max 5MB)
@@ -979,7 +1186,7 @@ const AddProduct = () => {
                       />
                       <label htmlFor="main-image-upload">
                         <Button type="button" variant="outline" asChild>
-                          <span>Choose Image</span>
+                          <span>Choose New Image</span>
                         </Button>
                       </label>
                     </div>
@@ -988,7 +1195,7 @@ const AddProduct = () => {
                     {imagePreview && (
                       <div className="space-y-3">
                         <h4 className="text-sm font-medium text-gray-700">
-                          Main Image
+                          Current Main Image
                         </h4>
                         <div className="relative group">
                           <img
@@ -1052,7 +1259,7 @@ const AddProduct = () => {
                     {imagePreviews.length > 0 && (
                       <div className="space-y-3">
                         <h4 className="text-sm font-medium text-gray-700">
-                          Additional Images ({imagePreviews.length})
+                          Current Additional Images ({imagePreviews.length})
                         </h4>
                         <div className="grid grid-cols-2 gap-3">
                           {imagePreviews.map((image, index) => (
@@ -1202,18 +1409,18 @@ const AddProduct = () => {
                 <CardContent className="space-y-4">
                   <Button
                     type="submit"
-                    disabled={createProductMutation.isPending}
+                    disabled={updateProductMutation.isPending}
                     className="w-full bg-black text-white hover:bg-gray-800"
                   >
-                    {createProductMutation.isPending ? (
+                    {updateProductMutation.isPending ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Creating Product...
+                        Updating Product...
                       </>
                     ) : (
                       <>
                         <Save className="w-4 h-4 mr-2" />
-                        Create Product
+                        Update Product
                       </>
                     )}
                   </Button>
@@ -1223,7 +1430,7 @@ const AddProduct = () => {
                     variant="outline"
                     className="w-full"
                     onClick={() => navigate("/admin/products")}
-                    disabled={createProductMutation.isPending}
+                    disabled={updateProductMutation.isPending}
                   >
                     Cancel
                   </Button>
@@ -1237,4 +1444,4 @@ const AddProduct = () => {
   );
 };
 
-export default AddProduct;
+export default EditProduct;

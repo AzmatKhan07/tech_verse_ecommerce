@@ -10,6 +10,10 @@ import {
   List,
   Tag,
   Grid,
+  Palette,
+  Ruler,
+  Percent,
+  Image,
 } from "lucide-react";
 import { useUser } from "@/context/UserContext";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -60,6 +64,33 @@ const AdminSidebar = ({ isOpen, onClose }) => {
       label: "Brands",
       icon: Tag,
       path: "/admin/brands",
+    },
+
+    {
+      id: "colors",
+      label: "Colors",
+      icon: Palette,
+      path: "/admin/colors",
+    },
+
+    {
+      id: "sizes",
+      label: "Sizes",
+      icon: Ruler,
+      path: "/admin/sizes",
+    },
+
+    {
+      id: "taxes",
+      label: "Taxes",
+      icon: Percent,
+      path: "/admin/taxes",
+    },
+    {
+      id: "home-banner",
+      label: "Home Banner",
+      icon: Image,
+      path: "/admin/home-banner",
     },
   ];
 

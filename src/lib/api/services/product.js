@@ -34,7 +34,21 @@ class ProductService {
       const response = await apiClient.get(url);
       console.log("📦 API Response:", response.data);
 
-      return response.data;
+      // Transform the API response to match our expected format
+      const transformedData = {
+        products: response.data.results || response.data,
+        pagination: {
+          count: response.data.count || 0,
+          totalPages: Math.ceil(
+            (response.data.count || 0) / (params.page_size || 20)
+          ),
+          currentPage: params.page || 1,
+          hasNext: !!response.data.next,
+          hasPrevious: !!response.data.previous,
+        },
+      };
+
+      return transformedData;
     } catch (error) {
       console.error("❌ Error fetching products:", error);
 
@@ -56,13 +70,30 @@ class ProductService {
     }
   }
 
-  // Get a single product by ID
-  async getProduct(id) {
+  // Get a single product by slug
+  async getProduct(slug) {
     try {
-      const response = await apiClient.get(`${this.baseURL}/products/${id}/`);
+      console.log("🔗 Fetching product by slug:", slug);
+      const url = `${this.baseURL}/products/${slug}/`;
+      console.log("🔗 Full URL:", url);
+      console.log("🔗 API Client baseURL:", apiClient.defaults.baseURL);
+
+      const response = await apiClient.get(url);
+      console.log("📦 Product data:", response.data);
+      console.log(
+        "📦 Product data structure:",
+        JSON.stringify(response.data, null, 2)
+      );
+      console.log("📦 Response status:", response.status);
+      console.log("📦 Response headers:", response.headers);
       return response.data;
     } catch (error) {
       console.error("Error fetching product:", error);
+      if (error.response) {
+        console.error("Response status:", error.response.status);
+        console.error("Response data:", error.response.data);
+        console.error("Response headers:", error.response.headers);
+      }
       throw error;
     }
   }
@@ -70,36 +101,57 @@ class ProductService {
   // Create a new product
   async createProduct(productData) {
     try {
+      console.log("🔗 Creating product...");
+      console.log(
+        "📦 Product data type:",
+        productData instanceof FormData ? "FormData" : "JSON"
+      );
+
       const response = await apiClient.post(
         `${this.baseURL}/products/`,
         productData
       );
       return response.data;
     } catch (error) {
-      console.error("Error creating product:", error);
+      console.error("❌ Error creating product:", error);
+      if (error.response) {
+        console.error("Response status:", error.response.status);
+        console.error("Response data:", error.response.data);
+      }
       throw error;
     }
   }
 
-  // Update an existing product
-  async updateProduct(id, productData) {
+  // Update an existing product by slug
+  async updateProduct(slug, productData) {
     try {
+      console.log("🔗 Updating product...");
+      console.log("📦 Product slug:", slug);
+      console.log(
+        "📦 Product data type:",
+        productData instanceof FormData ? "FormData" : "JSON"
+      );
+
       const response = await apiClient.put(
-        `${this.baseURL}/products/${id}/`,
+        `${this.baseURL}/products/${slug}/`,
         productData
       );
       return response.data;
     } catch (error) {
-      console.error("Error updating product:", error);
+      console.error("❌ Error updating product:", error);
+      if (error.response) {
+        console.error("Response status:", error.response.status);
+        console.error("Response data:", error.response.data);
+      }
       throw error;
     }
   }
 
-  // Partially update a product
-  async patchProduct(id, productData) {
+  // Partially update a product by slug
+  async patchProduct(slug, productData) {
     try {
       const response = await apiClient.patch(
-        `${this.baseURL}/products/${id}/`,
+        `${this.baseURL}/products/${slug}/`,
         productData
       );
       return response.data;

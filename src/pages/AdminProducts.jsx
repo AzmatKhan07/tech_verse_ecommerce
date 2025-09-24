@@ -21,7 +21,12 @@ const AdminProducts = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState("All");
-  const [filterStatus, setFilterStatus] = useState("All");
+  const [filterBrand, setFilterBrand] = useState("All");
+  const [filterFeatured, setFilterFeatured] = useState("All");
+  const [filterPromo, setFilterPromo] = useState("All");
+  const [filterDiscounted, setFilterDiscounted] = useState("All");
+  const [filterTrending, setFilterTrending] = useState("All");
+  const [filterArrival, setFilterArrival] = useState("All");
   const [currentPage, setCurrentPage] = useState(1);
 
   // TanStack Query hooks
@@ -33,6 +38,14 @@ const AdminProducts = () => {
     page_size: 20,
     ...(searchTerm && { search: searchTerm }),
     ...(filterCategory !== "All" && { category: filterCategory }),
+    ...(filterBrand !== "All" && { brand: filterBrand }),
+    ...(filterFeatured !== "All" && { is_featured: filterFeatured === "Yes" }),
+    ...(filterPromo !== "All" && { is_promo: filterPromo === "Yes" }),
+    ...(filterDiscounted !== "All" && {
+      is_discounted: filterDiscounted === "Yes",
+    }),
+    ...(filterTrending !== "All" && { is_tranding: filterTrending === "Yes" }),
+    ...(filterArrival !== "All" && { is_arrival: filterArrival === "Yes" }),
   };
 
   const {
@@ -65,14 +78,6 @@ const AdminProducts = () => {
     return () => clearTimeout(timeoutId);
   }, [searchTerm]);
 
-  const formatPrice = (amount) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 2,
-    }).format(amount);
-  };
-
   const getStatusColor = (status) => {
     switch (status.toLowerCase()) {
       case "active":
@@ -86,13 +91,63 @@ const AdminProducts = () => {
     }
   };
 
-  // Get unique categories from products
+  const formatPrice = (attributes) => {
+    if (!attributes || attributes.length === 0) {
+      return "No pricing";
+    }
+
+    const prices = attributes
+      .map((attr) => parseFloat(attr.price))
+      .filter((price) => !isNaN(price));
+    if (prices.length === 0) {
+      return "No pricing";
+    }
+
+    const minPrice = Math.min(...prices);
+    const maxPrice = Math.max(...prices);
+
+    if (minPrice === maxPrice) {
+      return new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "USD",
+        minimumFractionDigits: 2,
+      }).format(minPrice);
+    }
+
+    return `${new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      minimumFractionDigits: 2,
+    }).format(minPrice)} - ${new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      minimumFractionDigits: 2,
+    }).format(maxPrice)}`;
+  };
+
+  const getTotalStock = (attributes) => {
+    if (!attributes || attributes.length === 0) {
+      return 0;
+    }
+
+    return attributes.reduce((total, attr) => {
+      const qty = parseInt(attr.qty) || 0;
+      return total + qty;
+    }, 0);
+  };
+
+  // Get unique categories and brands from products
   const categories = [
     "All",
     ...new Set(
-      products.map((product) => product.category?.name || product.category)
+      products.map((product) => product.category_name).filter(Boolean)
     ),
-  ].filter(Boolean);
+  ];
+
+  const brands = [
+    "All",
+    ...new Set(products.map((product) => product.brand_name).filter(Boolean)),
+  ];
 
   // Handle product deletion
   const handleDeleteProduct = async (productId) => {
@@ -132,7 +187,7 @@ const AdminProducts = () => {
         </div>
 
         {/* Products Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-2">
@@ -156,12 +211,12 @@ const AdminProducts = () => {
               <div className="flex items-center gap-2">
                 <div className="w-5 h-5 bg-green-500 rounded-full"></div>
                 <div>
-                  <p className="text-sm text-gray-600">Active</p>
+                  <p className="text-sm text-gray-600">Featured</p>
                   <p className="text-xl font-bold">
                     {loading ? (
                       <Loader2 className="w-5 h-5 animate-spin" />
                     ) : (
-                      products.filter((p) => p.is_active !== false).length
+                      products.filter((p) => p.is_featured).length
                     )}
                   </p>
                 </div>
@@ -174,12 +229,12 @@ const AdminProducts = () => {
               <div className="flex items-center gap-2">
                 <div className="w-5 h-5 bg-orange-500 rounded-full"></div>
                 <div>
-                  <p className="text-sm text-gray-600">Low Stock</p>
+                  <p className="text-sm text-gray-600">Promo</p>
                   <p className="text-xl font-bold">
                     {loading ? (
                       <Loader2 className="w-5 h-5 animate-spin" />
                     ) : (
-                      products.filter((p) => p.stock <= 5 && p.stock > 0).length
+                      products.filter((p) => p.is_promo).length
                     )}
                   </p>
                 </div>
@@ -192,12 +247,30 @@ const AdminProducts = () => {
               <div className="flex items-center gap-2">
                 <div className="w-5 h-5 bg-red-500 rounded-full"></div>
                 <div>
-                  <p className="text-sm text-gray-600">Out of Stock</p>
+                  <p className="text-sm text-gray-600">Discounted</p>
                   <p className="text-xl font-bold">
                     {loading ? (
                       <Loader2 className="w-5 h-5 animate-spin" />
                     ) : (
-                      products.filter((p) => p.stock === 0).length
+                      products.filter((p) => p.is_discounted).length
+                    )}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 bg-pink-500 rounded-full"></div>
+                <div>
+                  <p className="text-sm text-gray-600">New Arrival</p>
+                  <p className="text-xl font-bold">
+                    {loading ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      products.filter((p) => p.is_arrival).length
                     )}
                   </p>
                 </div>
@@ -209,9 +282,9 @@ const AdminProducts = () => {
         {/* Filters */}
         <Card>
           <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Search */}
-              <div className="relative flex-1">
+              <div className="relative lg:col-span-2">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <Input
                   placeholder="Search products..."
@@ -234,16 +307,75 @@ const AdminProducts = () => {
                 ))}
               </select>
 
-              {/* Status Filter */}
+              {/* Brand Filter */}
               <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
+                value={filterBrand}
+                onChange={(e) => setFilterBrand(e.target.value)}
                 className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
               >
-                <option value="All">All Status</option>
-                <option value="Active">Active</option>
-                <option value="Low Stock">Low Stock</option>
-                <option value="Out of Stock">Out of Stock</option>
+                {brands.map((brand) => (
+                  <option key={brand} value={brand}>
+                    {brand}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Additional Filters Row */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-4">
+              {/* Featured Filter */}
+              <select
+                value={filterFeatured}
+                onChange={(e) => setFilterFeatured(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+              >
+                <option value="All">All Featured</option>
+                <option value="Yes">Featured</option>
+                <option value="No">Not Featured</option>
+              </select>
+
+              {/* Promo Filter */}
+              <select
+                value={filterPromo}
+                onChange={(e) => setFilterPromo(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+              >
+                <option value="All">All Promo</option>
+                <option value="Yes">Promo</option>
+                <option value="No">Not Promo</option>
+              </select>
+
+              {/* Discounted Filter */}
+              <select
+                value={filterDiscounted}
+                onChange={(e) => setFilterDiscounted(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+              >
+                <option value="All">All Discounted</option>
+                <option value="Yes">Discounted</option>
+                <option value="No">Not Discounted</option>
+              </select>
+
+              {/* Trending Filter */}
+              <select
+                value={filterTrending}
+                onChange={(e) => setFilterTrending(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+              >
+                <option value="All">All Trending</option>
+                <option value="Yes">Trending</option>
+                <option value="No">Not Trending</option>
+              </select>
+
+              {/* New Arrival Filter */}
+              <select
+                value={filterArrival}
+                onChange={(e) => setFilterArrival(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+              >
+                <option value="All">All New Arrival</option>
+                <option value="Yes">New Arrival</option>
+                <option value="No">Not New Arrival</option>
               </select>
             </div>
           </CardContent>
@@ -285,17 +417,23 @@ const AdminProducts = () => {
               </div>
             ) : (
               <div className="overflow-x-auto -mx-6 px-6">
-                <table className="w-full min-w-[800px]">
+                <table className="w-full min-w-[1200px]">
                   <thead>
                     <tr className="border-b border-gray-200">
                       <th className="text-left py-3 px-4 font-medium text-gray-600">
                         Product
                       </th>
                       <th className="text-left py-3 px-4 font-medium text-gray-600">
+                        Brand
+                      </th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-600">
                         Category
                       </th>
                       <th className="text-left py-3 px-4 font-medium text-gray-600">
-                        Price
+                        Model
+                      </th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-600">
+                        Price Range
                       </th>
                       <th className="text-left py-3 px-4 font-medium text-gray-600">
                         Stock
@@ -304,7 +442,7 @@ const AdminProducts = () => {
                         Status
                       </th>
                       <th className="text-left py-3 px-4 font-medium text-gray-600">
-                        Created
+                        Flags
                       </th>
                       <th className="text-left py-3 px-4 font-medium text-gray-600">
                         Actions
@@ -320,11 +458,7 @@ const AdminProducts = () => {
                         <td className="py-4 px-4">
                           <div className="flex items-center gap-3">
                             <img
-                              src={
-                                product.image ||
-                                product.images?.[0] ||
-                                "/placeholder-product.jpg"
-                              }
+                              src={product.image || "/placeholder-product.jpg"}
                               alt={product.name}
                               className="w-12 h-12 object-cover rounded-lg"
                               onError={(e) => {
@@ -336,44 +470,70 @@ const AdminProducts = () => {
                                 {product.name}
                               </p>
                               <p className="text-sm text-gray-500">
-                                {product.description ||
-                                  product.short_description}
+                                {product.short_desc}
                               </p>
                             </div>
                           </div>
                         </td>
                         <td className="py-4 px-4 text-gray-600">
-                          {product.category?.name || product.category}
+                          {product.brand_name || "N/A"}
+                        </td>
+                        <td className="py-4 px-4 text-gray-600">
+                          {product.category_name || "N/A"}
+                        </td>
+                        <td className="py-4 px-4 text-gray-600">
+                          {product.model || "N/A"}
                         </td>
                         <td className="py-4 px-4 font-medium">
-                          {formatPrice(product.price)}
+                          {formatPrice(product.attributes)}
                         </td>
                         <td className="py-4 px-4">
-                          <span
-                            className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              product.stock === 0
-                                ? "bg-red-100 text-red-800"
-                                : product.stock <= 5
-                                ? "bg-orange-100 text-orange-800"
-                                : "bg-green-100 text-green-800"
-                            }`}
-                          >
-                            {product.stock || 0}
-                          </span>
+                          <div className="flex items-center gap-1">
+                            <span className="text-sm font-medium">
+                              {getTotalStock(product.attributes)}
+                            </span>
+                            <span className="text-xs text-gray-500">units</span>
+                          </div>
                         </td>
                         <td className="py-4 px-4">
                           <Badge
-                            className={getStatusColor(
-                              product.is_active ? "Active" : "Inactive"
-                            )}
+                            className={
+                              product.status
+                                ? "bg-green-100 text-green-800"
+                                : "bg-gray-100 text-gray-800"
+                            }
                           >
-                            {product.is_active ? "Active" : "Inactive"}
+                            {product.status ? "Active" : "Inactive"}
                           </Badge>
                         </td>
-                        <td className="py-4 px-4 text-gray-600">
-                          {product.created_at
-                            ? new Date(product.created_at).toLocaleDateString()
-                            : "N/A"}
+                        <td className="py-4 px-4">
+                          <div className="flex flex-wrap gap-1">
+                            {product.is_featured && (
+                              <Badge className="bg-blue-100 text-blue-800 text-xs">
+                                Featured
+                              </Badge>
+                            )}
+                            {product.is_promo && (
+                              <Badge className="bg-orange-100 text-orange-800 text-xs">
+                                Promo
+                              </Badge>
+                            )}
+                            {product.is_discounted && (
+                              <Badge className="bg-green-100 text-green-800 text-xs">
+                                Discounted
+                              </Badge>
+                            )}
+                            {product.is_tranding && (
+                              <Badge className="bg-purple-100 text-purple-800 text-xs">
+                                Trending
+                              </Badge>
+                            )}
+                            {product.is_arrival && (
+                              <Badge className="bg-pink-100 text-pink-800 text-xs">
+                                New Arrival
+                              </Badge>
+                            )}
+                          </div>
                         </td>
                         <td className="py-4 px-4">
                           <div className="flex items-center gap-2">
@@ -382,7 +542,7 @@ const AdminProducts = () => {
                               variant="outline"
                               className="h-8 w-8 p-0"
                               onClick={() =>
-                                navigate(`/admin/edit-product/${product.id}`)
+                                navigate(`/admin/edit-product/${product.slug}`)
                               }
                             >
                               <Edit className="w-4 h-4" />

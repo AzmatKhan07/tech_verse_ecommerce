@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import AdminProducts from "./pages/AdminProducts";
 import AdminOrders from "./pages/AdminOrders";
 import AddProduct from "./pages/AddProduct";
+import EditProduct from "./pages/EditProduct";
 import OrderDetails from "./pages/OrderDetails";
 import Navbar from "./components/common/Navbar";
 import Footer from "./components/common/Footer";
@@ -23,6 +24,10 @@ import { WishlistProvider } from "./context/WishlistContext";
 import AdminCategory from "./pages/AdminCategory";
 import { Toaster } from "./components/ui/toaster";
 import Brand from "./pages/Brand";
+import AdminColor from "./pages/AdminColor";
+import AdminSize from "./pages/AdminSize";
+import AdminTaxes from "./pages/AdminTaxes";
+import AdminHomeBanner from "./pages/AdminHomeBanner";
 
 function App() {
   return (
@@ -42,9 +47,17 @@ function App() {
               <Route path="/admin/products" element={<AdminProducts />} />
               <Route path="/admin/categories" element={<AdminCategory />} />
               <Route path="/admin/add-product" element={<AddProduct />} />
+              <Route
+                path="/admin/edit-product/:slug"
+                element={<EditProduct />}
+              />
               <Route path="/admin/orders" element={<AdminOrders />} />
               <Route path="/admin/orders/:orderId" element={<OrderDetails />} />
               <Route path="/admin/brands" element={<Brand />} />
+              <Route path="/admin/colors" element={<AdminColor />} />
+              <Route path="/admin/sizes" element={<AdminSize />} />
+              <Route path="/admin/taxes" element={<AdminTaxes />} />
+              <Route path="/admin/home-banner" element={<AdminHomeBanner />} />
 
               {/* Main app routes with navbar/footer */}
               <Route
