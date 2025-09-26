@@ -1,99 +1,35 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Loader2 } from "lucide-react";
 import ProductCard from "./ProductCard";
 import { assets } from "@/assets/assets";
+import { useProducts } from "@/lib/query/hooks/useProducts";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useNavigate } from "react-router-dom";
 
 /**
  * ProductSection Component
  * Displays a section of new arrival products with header and grid layout
  */
 const ProductSection = () => {
-  // Sample product data - Replace with actual data from API/database
-  const newArrivals = [
-    {
-      id: "1",
-      name: "Loveseat Sofa",
-      image:
-        "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=500&h=500&fit=crop&auto=format",
-      alt: "Loveseat Sofa",
-      price: 199.0,
-      originalPrice: 400.0,
-      rating: 5,
-      isNew: true,
-      isOnSale: false,
-    },
-    {
-      id: "2",
-      name: "Table Lamp",
-      image:
-        "https://images.unsplash.com/photo-1506439773649-6e0eb8cfb237?w=500&h=500&fit=crop&auto=format",
-      alt: "Table Lamp",
-      price: 24.99,
-      rating: 5,
-      isNew: true,
-      isOnSale: true,
-    },
-    {
-      id: "3",
-      name: "Beige Table Lamp",
-      image:
-        "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=500&h=500&fit=crop&auto=format",
-      alt: "Beige Table Lamp",
-      price: 24.99,
-      rating: 5,
-      isNew: true,
-      isOnSale: false,
-    },
-    {
-      id: "4",
-      name: "Bamboo basket",
-      image:
-        "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=500&h=500&fit=crop&auto=format",
-      alt: "Bamboo basket",
-      price: 24.99,
-      rating: 4,
-      isNew: true,
-      isOnSale: true,
-    },
-    {
-      id: "5",
-      name: "Toasted",
-      image:
-        "https://images.unsplash.com/photo-1506439773649-6e0eb8cfb237?w=500&h=500&fit=crop&auto=format",
-      alt: "Toasted",
-      price: 224.99,
-      rating: 4,
-      isNew: true,
-      isOnSale: false,
-    },
-    {
-      id: "6",
-      name: "Bamboo basket",
-      image:
-        "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=500&h=500&fit=crop&auto=format",
-      alt: "Bamboo basket",
-      price: 24.99,
-      rating: 4,
-      isNew: true,
-      isOnSale: true,
-    },
-    {
-      id: "7",
-      name: "Toasted",
-      image:
-        "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=500&h=500&fit=crop&auto=format",
-      alt: "Toasted",
-      price: 224.99,
-      rating: 4,
-      isNew: true,
-      isOnSale: false,
-    },
-  ];
+  // Fetch new arrival products from API
+  const {
+    data: productsData,
+    isLoading,
+    error,
+  } = useProducts({
+    is_arrival: true,
+    page_size: 10,
+    ordering: "-created_at", // Latest first
+  });
+
+  // Use API products if available, otherwise fallback to empty array
+  const newArrivals = productsData?.products || [];
+
+  const navigate = useNavigate();
 
   const handleViewMore = () => {
-    // TODO: Implement navigation to products page
-    console.log("Navigate to more products");
+    navigate("/shop");
   };
 
   return (
@@ -119,13 +55,35 @@ const ProductSection = () => {
 
         {/* Products Grid - Horizontal Scroll */}
         <div className="productContainer overflow-x-auto pb-4">
-          <div className="flex gap-6 min-w-max">
-            {newArrivals.map((product) => (
-              <div key={product.id} className="flex-shrink-0 w-[280px]">
-                <ProductCard product={product} className="h-full w-full" />
-              </div>
-            ))}
-          </div>
+          {isLoading ? (
+            <div className="flex gap-6 min-w-max">
+              {Array.from({ length: 5 }, (_, i) => (
+                <div key={i} className="flex-shrink-0 w-[280px]">
+                  <Skeleton className="h-[400px] w-full rounded-lg" />
+                </div>
+              ))}
+            </div>
+          ) : error ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500">
+                Failed to load new arrivals. Please try again later.
+              </p>
+            </div>
+          ) : newArrivals.length > 0 ? (
+            <div className="flex gap-6 min-w-max">
+              {newArrivals.map((product) => (
+                <div key={product.id} className="flex-shrink-0 w-[280px]">
+                  <ProductCard product={product} className="h-full w-full" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-gray-500">
+                No new arrivals available at the moment.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Mobile View More Button */}

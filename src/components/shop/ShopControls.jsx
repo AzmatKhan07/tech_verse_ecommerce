@@ -6,18 +6,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Grid3X3, Grid2X2, LayoutList, Minus } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 /**
  * ShopControls Component
  * Displays sort options and view controls (grid/list view)
  */
-const ShopControls = ({
-  onSortChange,
-  onViewChange,
-  currentView = "grid4",
-}) => {
+const ShopControls = ({ onSortChange }) => {
   const [selectedSort, setSelectedSort] = useState("default");
 
   const sortOptions = [
@@ -34,13 +28,6 @@ const ShopControls = ({
     setSelectedSort(value);
     onSortChange?.(value);
   };
-
-  const viewOptions = [
-    { id: "grid4", icon: Grid3X3, label: "4 columns" },
-    { id: "grid3", icon: Grid2X2, label: "3 columns" },
-    { id: "grid2", icon: LayoutList, label: "2 columns" },
-    { id: "list", icon: Minus, label: "List view" },
-  ];
 
   return (
     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">

@@ -72,7 +72,7 @@ function App() {
                       <Route path="/contact" element={<Contact />} />
                       <Route path="/profile" element={<Profile />} />
                       <Route
-                        path="/product-details/:id"
+                        path="/product-details/:slug"
                         element={<ProductDetails />}
                       />
                     </Routes>

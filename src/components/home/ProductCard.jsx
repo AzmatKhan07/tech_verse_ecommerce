@@ -32,16 +32,44 @@ const ProductCard = ({ product, className = "" }) => {
     id,
     name,
     image,
-    alt,
-    price,
-    originalPrice,
-    rating = 5,
-    isNew = false,
-    isOnSale = false,
+    slug,
+    attributes = [],
+    avg_rating = "0",
+    is_arrival = false,
+    is_discounted = false,
+    is_promo = false,
   } = product;
+
+  // Calculate price from attributes
+  const getPrice = () => {
+    if (!attributes || attributes.length === 0) return 0;
+    const prices = attributes
+      .map((attr) => parseFloat(attr.price))
+      .filter((price) => !isNaN(price) && price > 0);
+    return prices.length > 0 ? Math.min(...prices) : 0;
+  };
+
+  const getOriginalPrice = () => {
+    if (!attributes || attributes.length === 0) return null;
+    const mrpPrices = attributes
+      .map((attr) => parseFloat(attr.mrp))
+      .filter((price) => !isNaN(price) && price > 0);
+    const maxMrp = mrpPrices.length > 0 ? Math.max(...mrpPrices) : null;
+    const currentPrice = getPrice();
+    return maxMrp && maxMrp > currentPrice ? maxMrp : null;
+  };
+
+  const price = getPrice();
+  const originalPrice = getOriginalPrice();
+  const rating = parseFloat(avg_rating) || 0;
+  const isNew = is_arrival;
+  const isOnSale = is_discounted || is_promo;
 
   // Format price to currency
   const formatPrice = (amount) => {
+    if (!amount || isNaN(amount) || amount <= 0) {
+      return "Price not available";
+    }
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",
@@ -96,10 +124,13 @@ const ProductCard = ({ product, className = "" }) => {
 
           {/* Product Image */}
           <img
-            src={image}
-            alt={alt}
+            src={image || "/placeholder-product.jpg"}
+            alt={name || "Product"}
             className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
             loading="lazy"
+            onError={(e) => {
+              e.target.src = "/placeholder-product.jpg";
+            }}
           />
 
           {/* Add to Cart Button - Appears on Hover */}
@@ -127,7 +158,7 @@ const ProductCard = ({ product, className = "" }) => {
           <h3
             className="font-medium text-gray-900 text-sm leading-tight line-clamp-2"
             onClick={() => {
-              navigate(`/product-details/${id}`);
+              navigate(`/product-details/${slug || id}`);
             }}
           >
             {name}

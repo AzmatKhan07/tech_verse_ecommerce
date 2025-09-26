@@ -6,16 +6,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
 
 /**
  * ShopFilters Component
  * Displays category and price filters for the shop
  */
-const ShopFilters = ({ onCategoryChange, onPriceChange }) => {
-  const [selectedCategory, setSelectedCategory] = useState("living-room");
+const ShopFilters = ({
+  onCategoryChange,
+  onPriceChange,
+  onSearchChange,
+  searchTerm = "",
+}) => {
+  const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedPrice, setSelectedPrice] = useState("all-price");
 
   const categories = [
+    { value: "all", label: "All Categories" },
     { value: "living-room", label: "Living Room" },
     { value: "bedroom", label: "Bedroom" },
     { value: "kitchen", label: "Kitchen" },
@@ -43,8 +51,27 @@ const ShopFilters = ({ onCategoryChange, onPriceChange }) => {
     onPriceChange?.(value);
   };
 
+  const handleSearchChange = (e) => {
+    onSearchChange?.(e.target.value);
+  };
+
   return (
     <div className="flex flex-col sm:flex-row gap-4 mb-8 w-2/5">
+      {/* Search */}
+      <div className="flex-1">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          SEARCH
+        </label>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <Input
+            placeholder="Search products..."
+            value={searchTerm}
+            onChange={handleSearchChange}
+            className="pl-10 border-2 border-gray-500 outline-none"
+          />
+        </div>
+      </div>
       {/* Categories Filter */}
       <div className="flex-1">
         <label className="block text-sm font-medium text-gray-700 mb-2">

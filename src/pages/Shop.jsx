@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Navbar from "@/components/common/Navbar";
 import Footer from "@/components/common/Footer";
 import ShopHeader from "@/components/shop/ShopHeader";
@@ -6,13 +6,56 @@ import ShopFilters from "@/components/shop/ShopFilters";
 import ShopControls from "@/components/shop/ShopControls";
 import ShopProductCard from "@/components/shop/ShopProductCard";
 import ShopPagination from "@/components/shop/ShopPagination";
+import { useProducts } from "@/lib/query/hooks/useProducts";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Loader2 } from "lucide-react";
 
 const Shop = () => {
-  const [currentView, setCurrentView] = useState("grid4");
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedCategory, setSelectedCategory] = useState("living-room");
+  const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedPrice, setSelectedPrice] = useState("all-price");
   const [selectedSort, setSelectedSort] = useState("default");
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // Build query parameters for API
+  const queryParams = {
+    page: currentPage,
+    page_size: 12, // Show 12 products per page
+    ...(selectedCategory !== "all" && { category: selectedCategory }),
+    ...(searchTerm && { search: searchTerm }),
+    ...(selectedSort !== "default" && { ordering: selectedSort }),
+  };
+
+  // Fetch products from API
+  const {
+    data: productsData,
+    isLoading,
+    error,
+    refetch,
+  } = useProducts(queryParams);
+
+  // Extract data from the query result
+  const products = productsData?.products || [];
+  const pagination = productsData?.pagination || {
+    count: 0,
+    totalPages: 1,
+    currentPage: 1,
+    hasNext: false,
+    hasPrevious: false,
+  };
+  const totalCount = pagination.count;
+  const totalPages = pagination.totalPages;
+
+  // Debounced search effect - reset to page 1 when search changes
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (currentPage !== 1) {
+        setCurrentPage(1);
+      }
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm]);
 
   const handleCategoryChange = (category) => {
     setSelectedCategory(category);
@@ -28,94 +71,18 @@ const Shop = () => {
     setSelectedSort(sort);
   };
 
-  const handleViewChange = (view) => {
-    setCurrentView(view);
-  };
-
   const handlePageChange = (page) => {
     setCurrentPage(page);
+  };
+
+  const handleSearchChange = (search) => {
+    setSearchTerm(search);
   };
 
   const handleShowMore = () => {
     // Logic to load more products
     console.log("Loading more products...");
   };
-
-  // Sample products data - moved from ShopGrid
-  const sampleProducts = [
-    {
-      id: "1",
-      name: "Off-white Pillow",
-      image:
-        "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=600&h=600&fit=crop&auto=format",
-      alt: "Off-white Pillow",
-      price: 7.99,
-      originalPrice: 13.0,
-      rating: 5,
-      isNew: true,
-      isOnSale: true,
-      description:
-        "Super-soft cushion cover in off-white with a tactile pattern that enhances the different tones in the pile and base.",
-    },
-    {
-      id: "2",
-      name: "Table Lamp",
-      image:
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&h=600&fit=crop&auto=format",
-      alt: "Table Lamp",
-      price: 39.99,
-      rating: 5,
-      isNew: true,
-      description:
-        "Like small jewels in shiny brass and grey clear glass, spread a soft mood light that creates exciting shadows on walls and ceilings.",
-    },
-    {
-      id: "3",
-      name: "White Drawer unit",
-      image:
-        "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&h=600&fit=crop&auto=format",
-      alt: "White Drawer unit",
-      price: 89.99,
-      rating: 5,
-      isNew: true,
-      description:
-        "Super-soft cushion cover in off-white with a tactile pattern that enhances the different tones in the pile and base.",
-    },
-    {
-      id: "4",
-      name: "Cozy Sofa",
-      image:
-        "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=600&h=600&fit=crop&auto=format",
-      alt: "Cozy Sofa",
-      price: 299.0,
-      rating: 5,
-      isNew: true,
-      description:
-        "Easy transportation was the goal when we created this comfy loveseat with durable beige polyester fabric.",
-    },
-    {
-      id: "5",
-      name: "Bamboo Basket",
-      image:
-        "https://images.unsplash.com/photo-1506439773649-6e0eb8cfb237?w=600&h=600&fit=crop&auto=format",
-      alt: "Bamboo Basket",
-      price: 9.99,
-      rating: 5,
-      description:
-        "With its soft shape and color, this spacious basket is just as decorative wherever you choose to put it.",
-    },
-    {
-      id: "6",
-      name: "Black Tray table",
-      image:
-        "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&h=600&fit=crop&auto=format",
-      alt: "Black Tray table",
-      price: 19.19,
-      rating: 5,
-      description:
-        "Easy to love at a price that's hard to resist. Buy one or buy a few and make every space where you sit more convenient.",
-    },
-  ];
 
   return (
     <div className="min-h-screen bg-white">
@@ -131,28 +98,70 @@ const Shop = () => {
               <ShopFilters
                 onCategoryChange={handleCategoryChange}
                 onPriceChange={handlePriceChange}
+                onSearchChange={handleSearchChange}
+                searchTerm={searchTerm}
               />
 
               {/* Controls */}
-              <ShopControls
-                onSortChange={handleSortChange}
-                currentView={currentView}
-              />
+              <ShopControls onSortChange={handleSortChange} />
             </div>
 
-            <div className={`grid grid-cols-1 lg:grid-cols-4 gap-6`}>
-              {sampleProducts.map((product) => (
-                <ShopProductCard key={product.id} product={product} />
-              ))}
-            </div>
+            {/* Error Message */}
+            {error && (
+              <div className="text-center py-8">
+                <p className="text-red-500 mb-4">
+                  {error.message ||
+                    "Failed to load products. Please try again."}
+                </p>
+                <button
+                  onClick={() => refetch()}
+                  className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
+
+            {/* Products Grid */}
+            {isLoading ? (
+              <div className={`grid grid-cols-1 lg:grid-cols-4 gap-6`}>
+                {Array.from({ length: 12 }, (_, i) => (
+                  <div key={i} className="space-y-4">
+                    <Skeleton className="h-[300px] w-full rounded-lg" />
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-3/4" />
+                      <Skeleton className="h-4 w-1/2" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : products.length > 0 ? (
+              <div className={`grid grid-cols-1 lg:grid-cols-4 gap-6`}>
+                {products.map((product) => (
+                  <ShopProductCard key={product.id} product={product} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-gray-500 text-lg">
+                  No products found matching your criteria.
+                </p>
+                <p className="text-gray-400 text-sm mt-2">
+                  Try adjusting your filters or search terms.
+                </p>
+              </div>
+            )}
 
             {/* Pagination */}
-            <ShopPagination
-              currentPage={currentPage}
-              totalPages={5}
-              onPageChange={handlePageChange}
-              onShowMore={handleShowMore}
-            />
+            {totalPages > 1 && (
+              <ShopPagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalCount={totalCount}
+                onPageChange={handlePageChange}
+                onShowMore={handleShowMore}
+              />
+            )}
           </div>
         </section>
       </main>
