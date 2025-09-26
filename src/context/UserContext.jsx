@@ -91,12 +91,13 @@ export const UserProvider = ({ children }) => {
             setUser((prev) => ({ ...prev, ...currentUser, isLoggedIn: true }));
           } catch (error) {
             console.error("Token verification failed:", error);
-            // Token is invalid, logout user
-            logout();
+            // Don't logout automatically, just set user as not logged in
+            setUser({ ...initialUserState, isLoggedIn: false });
           }
         } catch (error) {
           console.error("Error loading user from localStorage:", error);
-          logout();
+          // Don't logout automatically, just set user as not logged in
+          setUser({ ...initialUserState, isLoggedIn: false });
         }
       } else {
         // No valid session, ensure user is logged out

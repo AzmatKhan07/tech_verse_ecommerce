@@ -114,6 +114,7 @@ const EditProduct = () => {
   const [errors, setErrors] = useState({});
   const [imagePreview, setImagePreview] = useState(null);
   const [imagePreviews, setImagePreviews] = useState([]);
+  const [attributeImagePreviews, setAttributeImagePreviews] = useState({});
 
   // Extract data from API responses
   const brands = brandsData?.results || [];
@@ -131,10 +132,37 @@ const EditProduct = () => {
 
   // Load product data when it's available
   useEffect(() => {
-    if (product && brands.length > 0 && categories.length > 0) {
+    console.log("🔍 useEffect triggered with:", {
+      hasProduct: !!product,
+      brandsLength: brands.length,
+      categoriesLength: categories.length,
+      sizesLength: sizes.length,
+      colorsLength: colors.length,
+    });
+
+    if (
+      product &&
+      brands.length > 0 &&
+      categories.length > 0 &&
+      sizes.length > 0 &&
+      colors.length > 0
+    ) {
+      console.log("🔍 All data available, setting form data");
       console.log("🔍 Product data received:", product);
-      console.log("🔍 Product category:", product.category);
-      console.log("🔍 Product brand:", product.brand);
+      console.log(
+        "🔍 Product category:",
+        product.category,
+        typeof product.category
+      );
+      console.log("🔍 Product brand:", product.brand, typeof product.brand);
+      console.log(
+        "🔍 Product category structure:",
+        JSON.stringify(product.category, null, 2)
+      );
+      console.log(
+        "🔍 Product brand structure:",
+        JSON.stringify(product.brand, null, 2)
+      );
       console.log("🔍 Product attributes:", product.attributes);
       console.log("🔍 Product images:", product.images);
       console.log("🔍 Product tax:", product.tax);
@@ -148,9 +176,37 @@ const EditProduct = () => {
       });
 
       // Map data according to the exact API structure
-      const categoryValue = product.category?.toString() || "";
-      const brandValue = product.brand?.toString() || "";
-      const taxValue = product.tax?.toString() || "";
+      // Handle different possible data formats
+      let categoryValue = "";
+      let brandValue = "";
+      let taxValue = "";
+
+      // Try different ways to extract category
+      if (product.category) {
+        if (typeof product.category === "object" && product.category.id) {
+          categoryValue = product.category.id.toString();
+        } else {
+          categoryValue = product.category.toString();
+        }
+      }
+
+      // Try different ways to extract brand
+      if (product.brand) {
+        if (typeof product.brand === "object" && product.brand.id) {
+          brandValue = product.brand.id.toString();
+        } else {
+          brandValue = product.brand.toString();
+        }
+      }
+
+      // Try different ways to extract tax
+      if (product.tax) {
+        if (typeof product.tax === "object" && product.tax.id) {
+          taxValue = product.tax.id.toString();
+        } else {
+          taxValue = product.tax.toString();
+        }
+      }
 
       console.log("🔍 Mapped values from API structure:", {
         categoryValue,
@@ -161,7 +217,37 @@ const EditProduct = () => {
         originalTax: product.tax,
       });
 
-      setFormData({
+      // Debug brand and category matching
+      console.log(
+        "🔍 Available brands:",
+        brands.map((b) => ({ id: b.id, name: b.name, idType: typeof b.id }))
+      );
+      console.log(
+        "🔍 Available categories:",
+        categories.map((c) => ({
+          id: c.id,
+          name: c.category_name,
+          idType: typeof c.id,
+        }))
+      );
+
+      const foundBrand = brands.find((b) => b.id.toString() === brandValue);
+      const foundCategory = categories.find(
+        (c) => c.id.toString() === categoryValue
+      );
+
+      console.log("🔍 Brand lookup:", {
+        brandValue,
+        foundBrand,
+        brandExists: !!foundBrand,
+      });
+      console.log("🔍 Category lookup:", {
+        categoryValue,
+        foundCategory,
+        categoryExists: !!foundCategory,
+      });
+
+      const newFormData = {
         category: categoryValue,
         name: product.name || "",
         brand: brandValue,
@@ -195,6 +281,13 @@ const EditProduct = () => {
                   color: attr.color?.toString() || "",
                 };
                 console.log(`🔍 Mapped attribute ${index}:`, mappedAttr);
+                console.log(`🔍 Original attribute ${index}:`, attr);
+                console.log(
+                  `🔍 Size value: ${attr.size} -> ${mappedAttr.size}`
+                );
+                console.log(
+                  `🔍 Color value: ${attr.color} -> ${mappedAttr.color}`
+                );
                 return mappedAttr;
               })
             : [
@@ -208,7 +301,16 @@ const EditProduct = () => {
                   color: "",
                 },
               ],
+      };
+
+      console.log("🔍 New form data to be set:", newFormData);
+      console.log("🔍 Brand and Category values in new form data:", {
+        brand: newFormData.brand,
+        category: newFormData.category,
+        tax: newFormData.tax,
       });
+
+      setFormData(newFormData);
 
       // Set image previews
       if (product.image) {
@@ -216,6 +318,17 @@ const EditProduct = () => {
       }
       if (product.images && product.images.length > 0) {
         setImagePreviews(product.images.map((img) => img.image || img));
+      }
+
+      // Set attribute image previews
+      if (product.attributes && product.attributes.length > 0) {
+        const attrImagePreviews = {};
+        product.attributes.forEach((attr, index) => {
+          if (attr.attr_image) {
+            attrImagePreviews[index] = attr.attr_image;
+          }
+        });
+        setAttributeImagePreviews(attrImagePreviews);
       }
 
       // Debug form data after setting
@@ -227,6 +340,11 @@ const EditProduct = () => {
         images: product.images,
         mainImage: product.image,
       });
+
+      // Force a re-render by logging the current formData state
+      setTimeout(() => {
+        console.log("🔍 FormData state after setting (delayed):", formData);
+      }, 100);
 
       // Additional debugging for dropdown options
       console.log(
@@ -260,17 +378,57 @@ const EditProduct = () => {
       console.log("🔍 Selected brand found:", selectedBrand);
       console.log("🔍 Selected category found:", selectedCategory);
       console.log("🔍 Selected tax found:", selectedTax);
+
+      // Check attribute size and color selections
+      if (product.attributes && product.attributes.length > 0) {
+        product.attributes.forEach((attr, index) => {
+          const selectedSize = sizes.find(
+            (s) => s.id.toString() === attr.size?.toString()
+          );
+          const selectedColor = colors.find(
+            (c) => c.id.toString() === attr.color?.toString()
+          );
+          console.log(
+            `🔍 Attribute ${index} - Selected size found:`,
+            selectedSize
+          );
+          console.log(
+            `🔍 Attribute ${index} - Selected color found:`,
+            selectedColor
+          );
+        });
+      }
     }
   }, [product, brands, categories, taxes, colors, sizes]);
 
   // Debug formData state changes
   useEffect(() => {
     console.log("🔍 FormData state changed:", formData);
-    console.log("🔍 FormData category value:", formData.category);
-    console.log("🔍 FormData brand value:", formData.brand);
-    console.log("🔍 FormData tax value:", formData.tax);
+    console.log(
+      "🔍 FormData category value:",
+      formData.category,
+      typeof formData.category
+    );
+    console.log(
+      "🔍 FormData brand value:",
+      formData.brand,
+      typeof formData.brand
+    );
+    console.log("🔍 FormData tax value:", formData.tax, typeof formData.tax);
     console.log("🔍 FormData attributes:", formData.attributes);
-  }, [formData]);
+
+    // Check if the values match any dropdown options
+    if (formData.brand) {
+      const brandMatch = brands.find((b) => b.id.toString() === formData.brand);
+      console.log("🔍 Brand match found:", brandMatch);
+    }
+    if (formData.category) {
+      const categoryMatch = categories.find(
+        (c) => c.id.toString() === formData.category
+      );
+      console.log("🔍 Category match found:", categoryMatch);
+    }
+  }, [formData, brands, categories]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -422,6 +580,37 @@ const EditProduct = () => {
     );
   };
 
+  // Handle attribute image change
+  const handleAttributeImageChange = (index, file) => {
+    if (file) {
+      const newAttributes = [...formData.attributes];
+      newAttributes[index] = { ...newAttributes[index], attr_image: file };
+      setFormData({ ...formData, attributes: newAttributes });
+
+      // Create preview URL
+      const previewUrl = URL.createObjectURL(file);
+      setAttributeImagePreviews((prev) => ({
+        ...prev,
+        [index]: previewUrl,
+      }));
+    }
+  };
+
+  // Remove attribute image
+  const removeAttributeImage = (index) => {
+    const newAttributes = [...formData.attributes];
+    newAttributes[index] = { ...newAttributes[index], attr_image: null };
+    setFormData({ ...formData, attributes: newAttributes });
+
+    // Remove preview
+    const newPreviews = { ...attributeImagePreviews };
+    if (newPreviews[index]) {
+      URL.revokeObjectURL(newPreviews[index]);
+      delete newPreviews[index];
+    }
+    setAttributeImagePreviews(newPreviews);
+  };
+
   const addAttribute = () => {
     setFormData((prev) => ({
       ...prev,
@@ -563,17 +752,38 @@ const EditProduct = () => {
         );
       }
 
-      // Add attributes as JSON
-      const attributesData = formData.attributes.map((attr) => ({
-        sku: attr.sku.trim(),
-        mrp: parseFloat(attr.mrp),
-        price: parseFloat(attr.price),
-        qty: parseInt(attr.qty),
-        size: attr.size ? parseInt(attr.size) : null,
-        color: attr.color ? parseInt(attr.color) : null,
-      }));
+      // Add attributes as individual form fields (array notation)
+      formData.attributes.forEach((attr, index) => {
+        submitData.append(`attributes[${index}][sku]`, attr.sku.trim());
+        submitData.append(
+          `attributes[${index}][mrp]`,
+          String(parseFloat(attr.mrp) || 0)
+        );
+        submitData.append(
+          `attributes[${index}][price]`,
+          String(parseFloat(attr.price) || 0)
+        );
+        submitData.append(
+          `attributes[${index}][qty]`,
+          String(parseInt(attr.qty) || 0)
+        );
+        submitData.append(
+          `attributes[${index}][size]`,
+          String(attr.size ? parseInt(attr.size) : 0)
+        );
+        submitData.append(
+          `attributes[${index}][color]`,
+          String(attr.color ? parseInt(attr.color) : 0)
+        );
 
-      submitData.append("attributes", JSON.stringify(attributesData));
+        // Attach attr_image as a file if provided
+        if (attr.attr_image && attr.attr_image instanceof File) {
+          submitData.append(
+            `attributes[${index}][attr_image]`,
+            attr.attr_image
+          );
+        }
+      });
 
       // Debug: Log FormData contents
       console.log("FormData contents:");
@@ -587,6 +797,9 @@ const EditProduct = () => {
       console.log("product.image:", product.image);
       console.log("formData.images:", formData.images);
       console.log("product.images:", product.images);
+      console.log("🔍 Attribute images debug:");
+      console.log("formData.attributes:", formData.attributes);
+      console.log("attributeImagePreviews:", attributeImagePreviews);
 
       await updateProductMutation.mutateAsync({ slug, data: submitData });
 
@@ -714,6 +927,7 @@ const EditProduct = () => {
                     <div>
                       <Label>Brand *</Label>
                       <Select
+                        key={`brand-${formData.brand}`}
                         value={formData.brand}
                         onValueChange={(value) =>
                           handleSelectChange("brand", value)
@@ -752,6 +966,7 @@ const EditProduct = () => {
                     <div>
                       <Label>Category *</Label>
                       <Select
+                        key={`category-${formData.category}`}
                         value={formData.category}
                         onValueChange={(value) =>
                           handleSelectChange("category", value)
@@ -868,6 +1083,7 @@ const EditProduct = () => {
                     <div>
                       <Label>Tax</Label>
                       <Select
+                        key={`tax-${formData.tax}`}
                         value={formData.tax}
                         onValueChange={(value) =>
                           handleSelectChange("tax", value)
@@ -1088,6 +1304,7 @@ const EditProduct = () => {
                         <div>
                           <Label>Size</Label>
                           <Select
+                            key={`size-${index}-${attr.size}`}
                             value={attr.size}
                             onValueChange={(value) =>
                               updateAttribute(index, "size", value)
@@ -1119,6 +1336,7 @@ const EditProduct = () => {
                         <div>
                           <Label>Color</Label>
                           <Select
+                            key={`color-${index}-${attr.color}`}
                             value={attr.color}
                             onValueChange={(value) =>
                               updateAttribute(index, "color", value)
@@ -1151,6 +1369,64 @@ const EditProduct = () => {
                               )}
                             </SelectContent>
                           </Select>
+                        </div>
+                      </div>
+
+                      {/* Attribute Image Upload */}
+                      <div className="mt-4">
+                        <Label>Attribute Image</Label>
+                        <div className="mt-2">
+                          {attributeImagePreviews[index] ? (
+                            <div className="relative inline-block">
+                              <img
+                                src={attributeImagePreviews[index]}
+                                alt={`Attribute ${index + 1} preview`}
+                                className="w-24 h-24 object-cover rounded-lg border"
+                              />
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="sm"
+                                className="absolute -top-2 -right-2 w-6 h-6 rounded-full p-0"
+                                onClick={() => removeAttributeImage(index)}
+                              >
+                                <X className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+                              <div className="text-center">
+                                <Upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
+                                <p className="text-sm text-gray-600 mb-2">
+                                  Upload attribute image
+                                </p>
+                                <Input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={(e) => {
+                                    const file = e.target.files[0];
+                                    if (file) {
+                                      handleAttributeImageChange(index, file);
+                                    }
+                                  }}
+                                  className="hidden"
+                                  id={`attr-image-${index}`}
+                                />
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() =>
+                                    document
+                                      .getElementById(`attr-image-${index}`)
+                                      .click()
+                                  }
+                                >
+                                  Choose File
+                                </Button>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
