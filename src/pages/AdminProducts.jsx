@@ -13,6 +13,28 @@ import {
   Loader2,
   AlertCircle,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { useProducts, useDeleteProduct } from "@/lib/query/hooks/useProducts";
@@ -28,6 +50,8 @@ const AdminProducts = () => {
   const [filterTrending, setFilterTrending] = useState("All");
   const [filterArrival, setFilterArrival] = useState("All");
   const [currentPage, setCurrentPage] = useState(1);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [productToDelete, setProductToDelete] = useState(null);
 
   // TanStack Query hooks
   const deleteProductMutation = useDeleteProduct();
@@ -103,6 +127,8 @@ const AdminProducts = () => {
       return "No pricing";
     }
 
+    console.log(prices);
+
     const minPrice = Math.min(...prices);
     const maxPrice = Math.max(...prices);
 
@@ -150,14 +176,22 @@ const AdminProducts = () => {
   ];
 
   // Handle product deletion
-  const handleDeleteProduct = async (productId) => {
-    if (window.confirm("Are you sure you want to delete this product?")) {
-      try {
-        await deleteProductMutation.mutateAsync(productId);
-      } catch (err) {
-        console.error("Error deleting product:", err);
-        // Error is already handled by the mutation
-      }
+  const handleDeleteProduct = (product) => {
+    setProductToDelete(product);
+    setDeleteDialogOpen(true);
+  };
+
+  // Confirm product deletion
+  const confirmDeleteProduct = async () => {
+    if (!productToDelete) return;
+
+    try {
+      await deleteProductMutation.mutateAsync(productToDelete.slug);
+      setDeleteDialogOpen(false);
+      setProductToDelete(null);
+    } catch (err) {
+      console.error("Error deleting product:", err);
+      // Error is already handled by the mutation
     }
   };
 
@@ -187,7 +221,7 @@ const AdminProducts = () => {
         </div>
 
         {/* Products Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-2">
@@ -259,24 +293,6 @@ const AdminProducts = () => {
               </div>
             </CardContent>
           </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <div className="w-5 h-5 bg-pink-500 rounded-full"></div>
-                <div>
-                  <p className="text-sm text-gray-600">New Arrival</p>
-                  <p className="text-xl font-bold">
-                    {loading ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : (
-                      products.filter((p) => p.is_arrival).length
-                    )}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
 
         {/* Filters */}
@@ -295,88 +311,98 @@ const AdminProducts = () => {
               </div>
 
               {/* Category Filter */}
-              <select
-                value={filterCategory}
-                onChange={(e) => setFilterCategory(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
-              >
-                {categories.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
-              </select>
+              <Select value={filterCategory} onValueChange={setFilterCategory}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
               {/* Brand Filter */}
-              <select
-                value={filterBrand}
-                onChange={(e) => setFilterBrand(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
-              >
-                {brands.map((brand) => (
-                  <option key={brand} value={brand}>
-                    {brand}
-                  </option>
-                ))}
-              </select>
+              <Select value={filterBrand} onValueChange={setFilterBrand}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select brand" />
+                </SelectTrigger>
+                <SelectContent>
+                  {brands.map((brand) => (
+                    <SelectItem key={brand} value={brand}>
+                      {brand}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Additional Filters Row */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-4">
               {/* Featured Filter */}
-              <select
-                value={filterFeatured}
-                onChange={(e) => setFilterFeatured(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
-              >
-                <option value="All">All Featured</option>
-                <option value="Yes">Featured</option>
-                <option value="No">Not Featured</option>
-              </select>
+              <Select value={filterFeatured} onValueChange={setFilterFeatured}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Featured" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All Featured</SelectItem>
+                  <SelectItem value="Yes">Featured</SelectItem>
+                  <SelectItem value="No">Not Featured</SelectItem>
+                </SelectContent>
+              </Select>
 
               {/* Promo Filter */}
-              <select
-                value={filterPromo}
-                onChange={(e) => setFilterPromo(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
-              >
-                <option value="All">All Promo</option>
-                <option value="Yes">Promo</option>
-                <option value="No">Not Promo</option>
-              </select>
+              <Select value={filterPromo} onValueChange={setFilterPromo}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Promo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All Promo</SelectItem>
+                  <SelectItem value="Yes">Promo</SelectItem>
+                  <SelectItem value="No">Not Promo</SelectItem>
+                </SelectContent>
+              </Select>
 
               {/* Discounted Filter */}
-              <select
+              <Select
                 value={filterDiscounted}
-                onChange={(e) => setFilterDiscounted(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+                onValueChange={setFilterDiscounted}
               >
-                <option value="All">All Discounted</option>
-                <option value="Yes">Discounted</option>
-                <option value="No">Not Discounted</option>
-              </select>
+                <SelectTrigger>
+                  <SelectValue placeholder="Discounted" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All Discounted</SelectItem>
+                  <SelectItem value="Yes">Discounted</SelectItem>
+                  <SelectItem value="No">Not Discounted</SelectItem>
+                </SelectContent>
+              </Select>
 
               {/* Trending Filter */}
-              <select
-                value={filterTrending}
-                onChange={(e) => setFilterTrending(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
-              >
-                <option value="All">All Trending</option>
-                <option value="Yes">Trending</option>
-                <option value="No">Not Trending</option>
-              </select>
+              <Select value={filterTrending} onValueChange={setFilterTrending}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Trending" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All Trending</SelectItem>
+                  <SelectItem value="Yes">Trending</SelectItem>
+                  <SelectItem value="No">Not Trending</SelectItem>
+                </SelectContent>
+              </Select>
 
               {/* New Arrival Filter */}
-              <select
-                value={filterArrival}
-                onChange={(e) => setFilterArrival(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
-              >
-                <option value="All">All New Arrival</option>
-                <option value="Yes">New Arrival</option>
-                <option value="No">Not New Arrival</option>
-              </select>
+              <Select value={filterArrival} onValueChange={setFilterArrival}>
+                <SelectTrigger>
+                  <SelectValue placeholder="New Arrival" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All New Arrival</SelectItem>
+                  <SelectItem value="Yes">New Arrival</SelectItem>
+                  <SelectItem value="No">Not New Arrival</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
@@ -429,9 +455,7 @@ const AdminProducts = () => {
                       <th className="text-left py-3 px-4 font-medium text-gray-600">
                         Category
                       </th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-600">
-                        Model
-                      </th>
+
                       <th className="text-left py-3 px-4 font-medium text-gray-600">
                         Price Range
                       </th>
@@ -481,9 +505,7 @@ const AdminProducts = () => {
                         <td className="py-4 px-4 text-gray-600">
                           {product.category_name || "N/A"}
                         </td>
-                        <td className="py-4 px-4 text-gray-600">
-                          {product.model || "N/A"}
-                        </td>
+
                         <td className="py-4 px-4 font-medium">
                           {formatPrice(product.attributes)}
                         </td>
@@ -551,7 +573,7 @@ const AdminProducts = () => {
                               size="sm"
                               variant="outline"
                               className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
-                              onClick={() => handleDeleteProduct(product.id)}
+                              onClick={() => handleDeleteProduct(product)}
                               disabled={deleteProductMutation.isPending}
                             >
                               {deleteProductMutation.isPending ? (
@@ -572,46 +594,161 @@ const AdminProducts = () => {
                     No products found matching your criteria.
                   </div>
                 )}
+
+                {/* Pagination */}
+
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6">
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious
+                          onClick={() => handlePageChange(currentPage - 1)}
+                          className={
+                            currentPage === 1
+                              ? "pointer-events-none opacity-50"
+                              : "cursor-pointer"
+                          }
+                        />
+                      </PaginationItem>
+
+                      {/* Show page numbers */}
+                      {totalPages > 0 &&
+                        Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                          (page) => {
+                            // For single page, just show the page number
+                            if (totalPages === 1) {
+                              return (
+                                <PaginationItem key={page}>
+                                  <PaginationLink
+                                    onClick={() => handlePageChange(page)}
+                                    isActive={page === currentPage}
+                                    className="cursor-pointer"
+                                  >
+                                    {page}
+                                  </PaginationLink>
+                                </PaginationItem>
+                              );
+                            }
+
+                            // For multiple pages, show first page, last page, current page, and pages around current page
+                            const shouldShow =
+                              page === 1 ||
+                              page === totalPages ||
+                              (page >= currentPage - 1 &&
+                                page <= currentPage + 1);
+
+                            if (!shouldShow) {
+                              // Show ellipsis for gaps
+                              if (
+                                page === currentPage - 2 ||
+                                page === currentPage + 2
+                              ) {
+                                return (
+                                  <PaginationItem key={page}>
+                                    <PaginationEllipsis />
+                                  </PaginationItem>
+                                );
+                              }
+                              return null;
+                            }
+
+                            return (
+                              <PaginationItem key={page}>
+                                <PaginationLink
+                                  onClick={() => handlePageChange(page)}
+                                  isActive={page === currentPage}
+                                  className="cursor-pointer"
+                                >
+                                  {page}
+                                </PaginationLink>
+                              </PaginationItem>
+                            );
+                          }
+                        )}
+
+                      <PaginationItem>
+                        <PaginationNext
+                          onClick={() => handlePageChange(currentPage + 1)}
+                          className={
+                            currentPage === totalPages
+                              ? "pointer-events-none opacity-50"
+                              : "cursor-pointer"
+                          }
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                </div>
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-gray-600">
-                  Showing {(currentPage - 1) * 20 + 1} to{" "}
-                  {Math.min(currentPage * 20, totalCount)} of {totalCount}{" "}
-                  products
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Delete Product</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 p-4 bg-red-50 rounded-lg">
+                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                  <Trash2 className="w-5 h-5 text-red-600" />
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePageChange(currentPage - 1)}
-                    disabled={currentPage === 1}
-                  >
-                    Previous
-                  </Button>
-                  <span className="text-sm text-gray-600">
-                    Page {currentPage} of {totalPages}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    disabled={currentPage === totalPages}
-                  >
-                    Next
-                  </Button>
+                <div>
+                  <p className="font-medium text-gray-900">
+                    {productToDelete?.name}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    {productToDelete?.brand_name} •{" "}
+                    {productToDelete?.category_name}
+                  </p>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        )}
+              <p className="text-gray-600">
+                Are you sure you want to delete this product? This action cannot
+                be undone.
+                {productToDelete?.attributes?.length > 0 && (
+                  <span className="block mt-2 text-red-600 font-medium">
+                    ⚠️ This product has {productToDelete.attributes.length}{" "}
+                    variant(s) and {getTotalStock(productToDelete.attributes)}{" "}
+                    units in stock.
+                  </span>
+                )}
+              </p>
+              <div className="flex gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setDeleteDialogOpen(false);
+                    setProductToDelete(null);
+                  }}
+                  className="flex-1"
+                  disabled={deleteProductMutation.isPending}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={confirmDeleteProduct}
+                  className="flex-1"
+                  disabled={deleteProductMutation.isPending}
+                >
+                  {deleteProductMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    "Delete Product"
+                  )}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </AdminLayout>
   );

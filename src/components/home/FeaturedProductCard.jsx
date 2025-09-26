@@ -21,7 +21,7 @@ const FeaturedProductCard = ({ category, isLarge = false, className = "" }) => {
       <div className={isLarge ? "" : ""}>
         <h2 className="text-3xl font-bold text-black mb-2">{category.name}</h2>
         <Link
-          to={`/shop/${generateSlug(category.name)}`}
+          to={`/shop/${category.slug || generateSlug(category.name)}`}
           className="inline-flex items-center gap-2 bg-black text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-800 transition-colors duration-200"
         >
           Shop Now <ArrowRight className="w-4 h-4" />
@@ -31,7 +31,7 @@ const FeaturedProductCard = ({ category, isLarge = false, className = "" }) => {
       <div
         className={
           isLarge
-            ? "w-full flex justify-center items-center flex-1 overflow-hidden"
+            ? "w-full flex justify-center items-center flex-1 overflow-hidden "
             : "overflow-hidden"
         }
       >

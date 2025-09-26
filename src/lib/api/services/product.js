@@ -21,6 +21,8 @@ class ProductService {
         queryParams.append("is_promo", params.is_promo);
       if (params.is_tranding !== undefined)
         queryParams.append("is_tranding", params.is_tranding);
+      if (params.is_arrival !== undefined)
+        queryParams.append("is_arrival", params.is_arrival);
       if (params.ordering) queryParams.append("ordering", params.ordering);
       if (params.page) queryParams.append("page", params.page);
       if (params.search) queryParams.append("search", params.search);
@@ -161,16 +163,34 @@ class ProductService {
     }
   }
 
-  // Delete a product
-  async deleteProduct(id) {
+  // Delete a product by slug
+  async deleteProduct(slug) {
     try {
-      const response = await apiClient.delete(
-        `${this.baseURL}/products/${id}/`
+      console.log(
+        "🔗 Deleting product by slug:",
+        `${this.baseURL}/products/${slug}/`
       );
+      const response = await apiClient.delete(
+        `${this.baseURL}/products/${slug}/`
+      );
+      console.log("📦 Product deleted successfully:", response.status);
       return response.data;
     } catch (error) {
-      console.error("Error deleting product:", error);
-      throw error;
+      console.error("❌ Error deleting product:", error);
+      if (error.response) {
+        console.error("Response status:", error.response.status);
+        console.error("Response data:", error.response.data);
+        throw new Error(
+          `API Error: ${error.response.status} - ${
+            error.response.data?.detail || "Unknown error"
+          }`
+        );
+      } else if (error.request) {
+        console.error("Request error:", error.request);
+        throw new Error("Network Error: Unable to connect to the server");
+      } else {
+        throw new Error(`Request Error: ${error.message}`);
+      }
     }
   }
 
