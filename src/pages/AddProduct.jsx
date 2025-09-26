@@ -95,6 +95,7 @@ const AddProduct = () => {
   const [errors, setErrors] = useState({});
   const [imagePreview, setImagePreview] = useState(null);
   const [imagePreviews, setImagePreviews] = useState([]);
+  const [attributeImagePreviews, setAttributeImagePreviews] = useState({});
   console.log("🔍 AddProduct - FormData:", formData);
   // Debug formData state changes
   useEffect(() => {
@@ -265,6 +266,62 @@ const AddProduct = () => {
     );
   };
 
+  const handleAttributeImageChange = (attributeIndex, e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith("image/")) {
+        setErrors((prev) => ({
+          ...prev,
+          [`attr_image_${attributeIndex}`]: "Please select a valid image file",
+        }));
+        return;
+      }
+
+      // Validate file size (5MB limit)
+      if (file.size > 5 * 1024 * 1024) {
+        setErrors((prev) => ({
+          ...prev,
+          [`attr_image_${attributeIndex}`]: "Image size must be less than 5MB",
+        }));
+        return;
+      }
+
+      // Update the attribute with the image file
+      updateAttribute(attributeIndex, "attr_image", file);
+
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setAttributeImagePreviews((prev) => ({
+          ...prev,
+          [attributeIndex]: e.target.result,
+        }));
+      };
+      reader.readAsDataURL(file);
+
+      // Clear error
+      if (errors[`attr_image_${attributeIndex}`]) {
+        setErrors((prev) => ({
+          ...prev,
+          [`attr_image_${attributeIndex}`]: "",
+        }));
+      }
+    }
+
+    // Reset the input
+    e.target.value = "";
+  };
+
+  const removeAttributeImage = (attributeIndex) => {
+    updateAttribute(attributeIndex, "attr_image", null);
+    setAttributeImagePreviews((prev) => {
+      const newPreviews = { ...prev };
+      delete newPreviews[attributeIndex];
+      return newPreviews;
+    });
+  };
+
   const addAttribute = () => {
     setFormData((prev) => ({
       ...prev,
@@ -293,6 +350,10 @@ const AddProduct = () => {
   };
 
   const updateAttribute = (index, field, value) => {
+    console.log(
+      `🔧 Updating attribute ${index}, field: ${field}, value:`,
+      value
+    );
     setFormData((prev) => ({
       ...prev,
       attributes: prev.attributes.map((attr, i) =>
@@ -388,14 +449,15 @@ const AddProduct = () => {
         submitData.append("image", formData.image);
       }
 
-      // Add additional images with the new structure
+      // Add additional images as individual file uploads
       const additionalImages = formData.images
         .filter((img) => img.image !== null) // Filter out null images
-        .map((img) => ({ image: img.image }));
+        .map((img) => img.image);
 
-      if (additionalImages.length > 0) {
-        submitData.append("images", JSON.stringify(additionalImages));
-      }
+      // Append each additional image as a separate file upload
+      additionalImages.forEach((imageFile) => {
+        submitData.append("images", imageFile);
+      });
       // Add slug (auto-generated from name)
       const slug = formData.name
         .trim()
@@ -404,18 +466,44 @@ const AddProduct = () => {
         .replace(/(^-|-$)/g, "");
       submitData.append("slug", slug);
 
-      // Add attributes as JSON
-      const attributesData = formData.attributes.map((attr) => ({
-        sku: attr.sku.trim(),
-        mrp: parseFloat(attr.mrp),
-        price: parseFloat(attr.price),
-        qty: parseInt(attr.qty),
-        size: attr.size ? parseInt(attr.size) : null,
-        color: attr.color ? parseInt(attr.color) : null,
-        attr_image: attr.attr_image || null, // Include attr_image field
-      }));
+      // Add attributes as FormData array fields so attr_image can be sent as a file
+      formData.attributes.forEach((attr, index) => {
+        submitData.append(`attributes[${index}][sku]`, (attr.sku || "").trim());
+        submitData.append(
+          `attributes[${index}][mrp]`,
+          String(parseFloat(attr.mrp) || 0)
+        );
+        submitData.append(
+          `attributes[${index}][price]`,
+          String(parseFloat(attr.price) || 0)
+        );
+        submitData.append(
+          `attributes[${index}][qty]`,
+          String(parseInt(attr.qty) || 0)
+        );
+        submitData.append(
+          `attributes[${index}][size]`,
+          String(attr.size ? parseInt(attr.size) : 0)
+        );
+        submitData.append(
+          `attributes[${index}][color]`,
+          String(attr.color ? parseInt(attr.color) : 0)
+        );
 
-      submitData.append("attributes", JSON.stringify(attributesData));
+        // Attach attr_image as a file if provided
+        if (attr.attr_image && attr.attr_image instanceof File) {
+          submitData.append(
+            `attributes[${index}][attr_image]`,
+            attr.attr_image
+          );
+        }
+      });
+
+      // Debug attributes data
+      console.log(
+        "🔗 AddProduct - Raw attributes from formData:",
+        formData.attributes
+      );
 
       // Debug: Log FormData contents
       console.log("🔗 AddProduct - FormData contents:");
@@ -424,12 +512,24 @@ const AddProduct = () => {
       }
 
       // Debug: Log attributes data specifically
-      console.log("🔗 AddProduct - Attributes data:", attributesData);
+      console.log("🔗 AddProduct - Attributes data:", formData.attributes);
       console.log("🔗 AddProduct - Images count:", formData.images.length);
-      console.log("🔗 AddProduct - Additional images:", additionalImages);
+      console.log(
+        "🔗 AddProduct - Additional images (files):",
+        additionalImages
+      );
       console.log(
         "🔗 AddProduct - Main image:",
         formData.image ? formData.image.name : "No main image"
+      );
+      console.log(
+        "🔗 AddProduct - Attribute images:",
+        formData.attributes.map((attr, index) => ({
+          index,
+          hasImage: !!attr.attr_image,
+          imageName:
+            attr.attr_image instanceof File ? attr.attr_image.name : "No image",
+        }))
       );
 
       await createProductMutation.mutateAsync(submitData);
@@ -944,6 +1044,73 @@ const AddProduct = () => {
                               )}
                             </SelectContent>
                           </Select>
+                        </div>
+                      </div>
+
+                      {/* Attribute Image Upload */}
+                      <div className="mt-4">
+                        <Label>Attribute Image (Optional)</Label>
+                        <div className="space-y-3">
+                          {/* Image Upload */}
+                          <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                            <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                            <p className="text-sm text-gray-600 mb-2">
+                              Upload attribute image
+                            </p>
+                            <p className="text-xs text-gray-500 mb-3">
+                              JPG, PNG or GIF (max 5MB)
+                            </p>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) =>
+                                handleAttributeImageChange(index, e)
+                              }
+                              className="hidden"
+                              id={`attr-image-upload-${index}`}
+                            />
+                            <label htmlFor={`attr-image-upload-${index}`}>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                asChild
+                              >
+                                <span>Choose Image</span>
+                              </Button>
+                            </label>
+                          </div>
+
+                          {/* Attribute Image Preview */}
+                          {attributeImagePreviews[index] && (
+                            <div className="space-y-2">
+                              <h5 className="text-sm font-medium text-gray-700">
+                                Attribute Image
+                              </h5>
+                              <div className="relative group">
+                                <img
+                                  src={attributeImagePreviews[index]}
+                                  alt={`Attribute ${index + 1} preview`}
+                                  className="w-full h-32 object-cover rounded-lg border border-gray-200"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="icon"
+                                  className="absolute top-2 right-2 bg-white opacity-0 group-hover:opacity-100 transition-opacity"
+                                  onClick={() => removeAttributeImage(index)}
+                                >
+                                  <X className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+
+                          {errors[`attr_image_${index}`] && (
+                            <p className="text-sm text-red-600">
+                              {errors[`attr_image_${index}`]}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </div>
