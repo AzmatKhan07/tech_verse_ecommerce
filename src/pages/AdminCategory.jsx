@@ -13,6 +13,8 @@ import {
   AlertCircle,
   Eye,
   EyeOff,
+  ChevronRight,
+  ChevronDown,
 } from "lucide-react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import {
@@ -47,6 +49,7 @@ const AdminCategory = () => {
   const [filterActive, setFilterActive] = useState("All");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState(null);
+  const [expandedCategories, setExpandedCategories] = useState(new Set());
 
   // TanStack Query hooks
   const deleteCategoryMutation = useDeleteCategory();
@@ -90,6 +93,193 @@ const AdminCategory = () => {
   };
   const totalCount = pagination.count;
   const totalPages = pagination.totalPages;
+
+  // Build category tree structure
+  const buildCategoryTree = (categories) => {
+    const categoryMap = new Map();
+    const rootCategories = [];
+
+    // First pass: create map of all categories
+    categories.forEach((category) => {
+      categoryMap.set(category.id, {
+        ...category,
+        children: [],
+        level: 0,
+      });
+    });
+
+    // Second pass: build tree structure
+    categories.forEach((category) => {
+      const categoryNode = categoryMap.get(category.id);
+
+      if (category.parent_category && category.parent_category !== 0) {
+        const parent = categoryMap.get(category.parent_category);
+        if (parent) {
+          categoryNode.level = parent.level + 1;
+          parent.children.push(categoryNode);
+        } else {
+          // Parent not found, treat as root
+          rootCategories.push(categoryNode);
+        }
+      } else {
+        // No parent, it's a root category
+        rootCategories.push(categoryNode);
+      }
+    });
+
+    return rootCategories;
+  };
+
+  const categoryTree = buildCategoryTree(categories);
+
+  // Toggle category expansion
+  const toggleCategoryExpansion = (categoryId) => {
+    setExpandedCategories((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(categoryId)) {
+        newSet.delete(categoryId);
+      } else {
+        newSet.add(categoryId);
+      }
+      return newSet;
+    });
+  };
+
+  // Recursive component to render category tree
+  const CategoryTreeNode = ({ category, level = 0 }) => {
+    const hasChildren = category.children && category.children.length > 0;
+    const isExpanded = expandedCategories.has(category.id);
+    const indentStyle = { paddingLeft: `${level * 20}px` };
+
+    return (
+      <>
+        <tr
+          key={category.id}
+          className="border-b border-gray-100 hover:bg-gray-50"
+        >
+          <td className="py-4 px-4">
+            <div className="flex items-center gap-3" style={indentStyle}>
+              {hasChildren && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 w-6 p-0 hover:bg-gray-200"
+                  onClick={() => toggleCategoryExpansion(category.id)}
+                >
+                  {isExpanded ? (
+                    <ChevronDown className="w-4 h-4" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4" />
+                  )}
+                </Button>
+              )}
+              {!hasChildren && <div className="w-6" />}
+              <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                <Folder className="w-5 h-5 text-gray-600" />
+              </div>
+              <div>
+                <p className="font-medium text-gray-900">
+                  {category.category_name || category.name}
+                  {level > 0 && (
+                    <span className="ml-2 text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                      Subcategory
+                    </span>
+                  )}
+                </p>
+                <p className="text-sm text-gray-500">
+                  {category.category_slug || category.slug}
+                </p>
+              </div>
+            </div>
+          </td>
+          <td className="py-4 px-4 text-gray-600 max-w-xs">
+            <p className="truncate">
+              {category.description || "No description"}
+            </p>
+          </td>
+          <td className="py-4 px-4">
+            <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+              {category.product_count || 0}
+            </span>
+          </td>
+          <td className="py-4 px-4">
+            <Badge
+              className={getStatusColor(
+                category.status !== undefined
+                  ? category.status
+                  : category.is_active
+              )}
+            >
+              {(
+                category.status !== undefined
+                  ? category.status
+                  : category.is_active
+              )
+                ? "Active"
+                : "Inactive"}
+            </Badge>
+          </td>
+          <td className="py-4 px-4 text-gray-600">
+            {category.created_at
+              ? new Date(category.created_at).toLocaleDateString()
+              : "N/A"}
+          </td>
+          <td className="py-4 px-4">
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 w-8 p-0"
+                onClick={() => handleToggleCategory(category)}
+                disabled={patchCategoryMutation.isPending}
+              >
+                {(
+                  category.status !== undefined
+                    ? category.status
+                    : category.is_active
+                ) ? (
+                  <EyeOff className="w-4 h-4" />
+                ) : (
+                  <Eye className="w-4 h-4" />
+                )}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 w-8 p-0"
+                onClick={() => handleEditCategory(category)}
+              >
+                <Edit className="w-4 h-4" />
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                onClick={() => handleDeleteCategory(category)}
+                disabled={deleteCategoryMutation.isPending}
+              >
+                {deleteCategoryMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Trash2 className="w-4 h-4" />
+                )}
+              </Button>
+            </div>
+          </td>
+        </tr>
+        {/* Render children recursively only if expanded */}
+        {hasChildren &&
+          isExpanded &&
+          category.children.map((child) => (
+            <CategoryTreeNode
+              key={child.id}
+              category={child}
+              level={level + 1}
+            />
+          ))}
+      </>
+    );
+  };
 
   // Debounced search effect - reset to page 1 when search changes
   useEffect(() => {
@@ -229,13 +419,43 @@ const AdminCategory = () => {
             </h1>
             <p className="text-gray-600 mt-1">Manage your product categories</p>
           </div>
-          <Button
-            className="bg-black text-white hover:bg-gray-800 w-full sm:w-auto"
-            onClick={handleAddCategory}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Category
-          </Button>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Button
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={() => {
+                const allCategoryIds = new Set();
+                const collectIds = (cats) => {
+                  cats.forEach((cat) => {
+                    if (cat.children && cat.children.length > 0) {
+                      allCategoryIds.add(cat.id);
+                      collectIds(cat.children);
+                    }
+                  });
+                };
+                collectIds(categoryTree);
+                setExpandedCategories(allCategoryIds);
+              }}
+            >
+              <ChevronDown className="w-4 h-4 mr-2" />
+              Expand All
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={() => setExpandedCategories(new Set())}
+            >
+              <ChevronRight className="w-4 h-4 mr-2" />
+              Collapse All
+            </Button>
+            <Button
+              className="bg-black text-white hover:bg-gray-800 w-full sm:w-auto"
+              onClick={handleAddCategory}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Category
+            </Button>
+          </div>
         </div>
 
         {/* Categories Stats */}
@@ -423,101 +643,12 @@ const AdminCategory = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {categories.map((category) => (
-                      <tr
+                    {categoryTree.map((category) => (
+                      <CategoryTreeNode
                         key={category.id}
-                        className="border-b border-gray-100 hover:bg-gray-50"
-                      >
-                        <td className="py-4 px-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                              <Folder className="w-5 h-5 text-gray-600" />
-                            </div>
-                            <div>
-                              <p className="font-medium text-gray-900">
-                                {category.category_name || category.name}
-                              </p>
-                              <p className="text-sm text-gray-500">
-                                {category.category_slug || category.slug}
-                              </p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-4 px-4 text-gray-600 max-w-xs">
-                          <p className="truncate">
-                            {category.description || "No description"}
-                          </p>
-                        </td>
-                        <td className="py-4 px-4">
-                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            {category.product_count || 0}
-                          </span>
-                        </td>
-                        <td className="py-4 px-4">
-                          <Badge
-                            className={getStatusColor(
-                              category.status !== undefined
-                                ? category.status
-                                : category.is_active
-                            )}
-                          >
-                            {(
-                              category.status !== undefined
-                                ? category.status
-                                : category.is_active
-                            )
-                              ? "Active"
-                              : "Inactive"}
-                          </Badge>
-                        </td>
-                        <td className="py-4 px-4 text-gray-600">
-                          {category.created_at
-                            ? new Date(category.created_at).toLocaleDateString()
-                            : "N/A"}
-                        </td>
-                        <td className="py-4 px-4">
-                          <div className="flex items-center gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-8 w-8 p-0"
-                              onClick={() => handleToggleCategory(category)}
-                              disabled={patchCategoryMutation.isPending}
-                            >
-                              {(
-                                category.status !== undefined
-                                  ? category.status
-                                  : category.is_active
-                              ) ? (
-                                <EyeOff className="w-4 h-4" />
-                              ) : (
-                                <Eye className="w-4 h-4" />
-                              )}
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-8 w-8 p-0"
-                              onClick={() => handleEditCategory(category)}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
-                              onClick={() => handleDeleteCategory(category)}
-                              disabled={deleteCategoryMutation.isPending}
-                            >
-                              {deleteCategoryMutation.isPending ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : (
-                                <Trash2 className="w-4 h-4" />
-                              )}
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
+                        category={category}
+                        level={0}
+                      />
                     ))}
                   </tbody>
                 </table>

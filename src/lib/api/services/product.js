@@ -5,7 +5,65 @@ class ProductService {
     this.baseURL = "/v1/products";
   }
 
-  // Get all products with optional filtering and pagination
+  // Advanced search with all filters
+  async searchAdvanced(params = {}) {
+    try {
+      const queryParams = new URLSearchParams();
+
+      // Add all supported parameters for advanced search
+      if (params.brand) queryParams.append("brand", params.brand);
+      if (params.category) queryParams.append("category", params.category);
+      if (params.size) queryParams.append("size", params.size);
+      if (params.color) queryParams.append("color", params.color);
+      if (params.min_price) queryParams.append("min_price", params.min_price);
+      if (params.max_price) queryParams.append("max_price", params.max_price);
+      if (params.is_discounted !== undefined)
+        queryParams.append("is_discounted", params.is_discounted);
+      if (params.is_featured !== undefined)
+        queryParams.append("is_featured", params.is_featured);
+      if (params.is_promo !== undefined)
+        queryParams.append("is_promo", params.is_promo);
+      if (params.is_tranding !== undefined)
+        queryParams.append("is_tranding", params.is_tranding);
+      if (params.is_arrival !== undefined)
+        queryParams.append("is_arrival", params.is_arrival);
+      if (params.ordering) queryParams.append("ordering", params.ordering);
+      if (params.page) queryParams.append("page", params.page);
+      if (params.search) queryParams.append("search", params.search);
+      if (params.page_size) queryParams.append("page_size", params.page_size);
+
+      const url = `${this.baseURL}/products/search_advanced/${
+        queryParams.toString() ? `?${queryParams.toString()}` : ""
+      }`;
+      console.log("🔗 Advanced search from:", url);
+
+      const response = await apiClient.get(url);
+      console.log("📦 API Response:", response.data);
+
+      // Return the response data directly as it matches the expected format
+      return response.data;
+    } catch (error) {
+      console.error("❌ Error in advanced search:", error);
+
+      // Provide more detailed error information
+      if (error.response) {
+        console.error("Response status:", error.response.status);
+        console.error("Response data:", error.response.data);
+        throw new Error(
+          `API Error: ${error.response.status} - ${
+            error.response.data?.detail || "Unknown error"
+          }`
+        );
+      } else if (error.request) {
+        console.error("Request error:", error.request);
+        throw new Error("Network Error: Unable to connect to the server");
+      } else {
+        throw new Error(`Request Error: ${error.message}`);
+      }
+    }
+  }
+
+  // Get all products with optional filtering and pagination (legacy method)
   async getProducts(params = {}) {
     try {
       const queryParams = new URLSearchParams();

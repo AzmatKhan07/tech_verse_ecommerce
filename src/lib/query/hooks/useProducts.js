@@ -10,15 +10,24 @@ export const productKeys = {
   detail: (id) => [...productKeys.details(), id],
 };
 
-// Hook to fetch products with filters and pagination
+// Hook to fetch products with advanced search and filters
 export const useProducts = (params = {}) => {
   return useQuery({
     queryKey: productKeys.list(params),
-    queryFn: () => productService.getProducts(params),
+    queryFn: () => productService.searchAdvanced(params),
     keepPreviousData: true, // Keep previous data while fetching new data
     select: (data) => {
-      // The ProductService already transforms the data, so we can return it as-is
-      return data;
+      // Transform the advanced search response to match expected format
+      return {
+        products: data.results || data,
+        pagination: {
+          count: data.count || 0,
+          totalPages: Math.ceil((data.count || 0) / (params.page_size || 20)),
+          currentPage: params.page || 1,
+          hasNext: !!data.next,
+          hasPrevious: !!data.previous,
+        },
+      };
     },
   });
 };

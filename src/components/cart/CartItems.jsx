@@ -2,9 +2,10 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Minus, Plus, X, Tag } from "lucide-react";
+import { Minus, Plus, X, Tag, Loader2 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "@/lib/hooks/use-toast";
 
 /**
  * CartItems Component
@@ -12,7 +13,15 @@ import { useNavigate } from "react-router-dom";
  */
 const CartItems = ({ onNext }) => {
   const navigate = useNavigate();
-  const { cartItems, cartTotal, updateQuantity, removeFromCart } = useCart();
+  const { toast } = useToast();
+  const {
+    cartItems,
+    cartTotal,
+    cartLoading,
+    cartError,
+    updateQuantity,
+    removeFromCart,
+  } = useCart();
 
   const [couponCode, setCouponCode] = useState("");
   const [shippingMethod, setShippingMethod] = useState("free");
@@ -20,6 +29,42 @@ const CartItems = ({ onNext }) => {
   const applyCoupon = () => {
     console.log("Applying coupon:", couponCode);
     // Coupon logic here
+  };
+
+  const handleUpdateQuantity = async (item, newQuantity) => {
+    try {
+      const productId = item.product_id || item.id;
+      await updateQuantity(productId, newQuantity);
+      toast({
+        title: "Cart Updated",
+        description: "Item quantity updated successfully.",
+        variant: "success",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update item quantity. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRemoveItem = async (item) => {
+    try {
+      const productId = item.product_id || item.id;
+      await removeFromCart(productId);
+      toast({
+        title: "Item Removed",
+        description: "Item removed from cart successfully.",
+        variant: "success",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to remove item. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const formatPrice = (amount) => {
@@ -34,6 +79,49 @@ const CartItems = ({ onNext }) => {
   const shippingCost =
     shippingMethod === "free" ? 0 : shippingMethod === "express" ? 15 : 21;
   const total = subtotal + shippingCost;
+
+  // Handle loading state
+  if (cartLoading) {
+    return (
+      <div className="text-center py-12">
+        <div className="max-w-md mx-auto">
+          <Loader2 className="w-12 h-12 mx-auto text-gray-400 animate-spin mb-4" />
+          <h3 className="text-xl font-medium text-gray-900 mb-2">
+            Loading cart...
+          </h3>
+          <p className="text-gray-600">
+            Please wait while we load your cart items.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle error state
+  if (cartError) {
+    return (
+      <div className="text-center py-12">
+        <div className="max-w-md mx-auto">
+          <div className="w-24 h-24 mx-auto bg-red-100 rounded-full flex items-center justify-center mb-6">
+            <X className="w-12 h-12 text-red-500" />
+          </div>
+          <h3 className="text-xl font-medium text-gray-900 mb-2">
+            Error Loading Cart
+          </h3>
+          <p className="text-gray-600 mb-6">
+            {cartError.message ||
+              "Failed to load cart items. Please try again."}
+          </p>
+          <Button
+            onClick={() => window.location.reload()}
+            className="bg-black text-white hover:bg-gray-800"
+          >
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   // Handle empty cart
   if (cartItems.length === 0) {
@@ -112,7 +200,7 @@ const CartItems = ({ onNext }) => {
                     <p className="text-sm text-gray-500">Color: {item.color}</p>
                   )}
                   <button
-                    onClick={() => removeFromCart(item.id)}
+                    onClick={() => handleRemoveItem(item)}
                     className="text-sm text-gray-400 hover:text-red-500 flex items-center gap-1 mt-1"
                   >
                     <X className="w-3 h-3" />
@@ -125,8 +213,11 @@ const CartItems = ({ onNext }) => {
               <div className="flex items-center justify-center">
                 <div className="flex items-center border border-gray-300 rounded-md">
                   <button
-                    onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                    onClick={() =>
+                      handleUpdateQuantity(item, item.quantity - 1)
+                    }
                     className="p-2 hover:bg-gray-50"
+                    disabled={item.quantity <= 1}
                   >
                     <Minus className="w-4 h-4" />
                   </button>
@@ -134,7 +225,9 @@ const CartItems = ({ onNext }) => {
                     {item.quantity}
                   </span>
                   <button
-                    onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                    onClick={() =>
+                      handleUpdateQuantity(item, item.quantity + 1)
+                    }
                     className="p-2 hover:bg-gray-50"
                   >
                     <Plus className="w-4 h-4" />

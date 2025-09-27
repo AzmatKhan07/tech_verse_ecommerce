@@ -6,6 +6,7 @@ import { Star, Heart } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
+import { useToast } from "@/lib/hooks/use-toast";
 
 /**
  * ShopProductCard Component
@@ -13,6 +14,7 @@ import { useWishlist } from "@/context/WishlistContext";
  */
 const ShopProductCard = ({ product, className = "" }) => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const { addToCart, isInCart } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
 
@@ -81,10 +83,26 @@ const ShopProductCard = ({ product, className = "" }) => {
     ));
   };
 
-  const handleAddToCart = (e) => {
+  const handleAddToCart = async (e) => {
     e.preventDefault();
     e.stopPropagation();
-    addToCart(product, 1);
+    try {
+      // Get the first available attribute for the product
+      const selectedAttribute = product.attributes?.[0] || null;
+      await addToCart(product, 1, selectedAttribute);
+      toast({
+        title: "Added to Cart",
+        description: `${name} has been added to your cart.`,
+        variant: "success",
+      });
+    } catch (error) {
+      console.error("Failed to add product to cart:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add product to cart. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleAddToWishlist = (e) => {
@@ -99,7 +117,7 @@ const ShopProductCard = ({ product, className = "" }) => {
 
   return (
     <Card
-      className={`group cursor-pointer transition-all duration-300 border-none shadow-none rounded-none ${className} p-0`}
+      className={`group cursor-pointer transition-all duration-300 shadow-none overflow-hidden ${className} p-0`}
       onClick={handleCardClick}
     >
       <CardContent className="p-0">
