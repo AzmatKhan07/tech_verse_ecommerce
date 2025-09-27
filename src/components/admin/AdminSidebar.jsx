@@ -92,6 +92,12 @@ const AdminSidebar = ({ isOpen, onClose }) => {
       icon: Image,
       path: "/admin/home-banner",
     },
+    {
+      id: "order-status",
+      label: "Order Status",
+      icon: ShoppingCart,
+      path: "/admin/order-status",
+    },
   ];
 
   const handleLogout = () => {
