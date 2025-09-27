@@ -18,7 +18,6 @@ import ProductDetails from "./pages/ProductDetails";
 import ScrollToTop from "./components/common/ScrollToTop";
 import ScrollRestoration from "./components/common/ScrollRestoration";
 import { CartProvider } from "./context/CartContext";
-import { UserProvider } from "./context/UserContext";
 import { AdminProvider } from "./context/AdminContext";
 import { WishlistProvider } from "./context/WishlistContext";
 import AdminCategory from "./pages/AdminCategory";
@@ -31,61 +30,56 @@ import AdminHomeBanner from "./pages/AdminHomeBanner";
 
 function App() {
   return (
-    <UserProvider>
-      <CartProvider>
-        <WishlistProvider>
-          <AdminProvider>
-            <ScrollToTop />
-            <ScrollRestoration />
-            <Routes>
-              {/* Auth routes without navbar/footer */}
-              <Route path="/signup" element={<Signup />} />
-              <Route path="/signin" element={<Signin />} />
+    <CartProvider>
+      <WishlistProvider>
+        <AdminProvider>
+          <ScrollToTop />
+          <ScrollRestoration />
+          <Routes>
+            {/* Auth routes without navbar/footer */}
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/signin" element={<Signin />} />
 
-              {/* Admin routes without navbar/footer */}
-              <Route path="/admin/dashboard" element={<Dashboard />} />
-              <Route path="/admin/products" element={<AdminProducts />} />
-              <Route path="/admin/categories" element={<AdminCategory />} />
-              <Route path="/admin/add-product" element={<AddProduct />} />
-              <Route
-                path="/admin/edit-product/:slug"
-                element={<EditProduct />}
-              />
-              <Route path="/admin/orders" element={<AdminOrders />} />
-              <Route path="/admin/orders/:orderId" element={<OrderDetails />} />
-              <Route path="/admin/brands" element={<Brand />} />
-              <Route path="/admin/colors" element={<AdminColor />} />
-              <Route path="/admin/sizes" element={<AdminSize />} />
-              <Route path="/admin/taxes" element={<AdminTaxes />} />
-              <Route path="/admin/home-banner" element={<AdminHomeBanner />} />
+            {/* Admin routes without navbar/footer */}
+            <Route path="/admin/dashboard" element={<Dashboard />} />
+            <Route path="/admin/products" element={<AdminProducts />} />
+            <Route path="/admin/categories" element={<AdminCategory />} />
+            <Route path="/admin/add-product" element={<AddProduct />} />
+            <Route path="/admin/edit-product/:slug" element={<EditProduct />} />
+            <Route path="/admin/orders" element={<AdminOrders />} />
+            <Route path="/admin/orders/:orderId" element={<OrderDetails />} />
+            <Route path="/admin/brands" element={<Brand />} />
+            <Route path="/admin/colors" element={<AdminColor />} />
+            <Route path="/admin/sizes" element={<AdminSize />} />
+            <Route path="/admin/taxes" element={<AdminTaxes />} />
+            <Route path="/admin/home-banner" element={<AdminHomeBanner />} />
 
-              {/* Main app routes with navbar/footer */}
-              <Route
-                path="/*"
-                element={
-                  <>
-                    <Navbar />
-                    <Routes>
-                      <Route path="/" element={<Home />} />
-                      <Route path="/shop" element={<Shop />} />
-                      <Route path="/cart" element={<Cart />} />
-                      <Route path="/contact" element={<Contact />} />
-                      <Route path="/profile" element={<Profile />} />
-                      <Route
-                        path="/product-details/:slug"
-                        element={<ProductDetails />}
-                      />
-                    </Routes>
-                    <Footer />
-                  </>
-                }
-              />
-            </Routes>
-            <Toaster />
-          </AdminProvider>
-        </WishlistProvider>
-      </CartProvider>
-    </UserProvider>
+            {/* Main app routes with navbar/footer */}
+            <Route
+              path="/*"
+              element={
+                <>
+                  <Navbar />
+                  <Routes>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/shop" element={<Shop />} />
+                    <Route path="/cart" element={<Cart />} />
+                    <Route path="/contact" element={<Contact />} />
+                    <Route path="/profile" element={<Profile />} />
+                    <Route
+                      path="/product-details/:slug"
+                      element={<ProductDetails />}
+                    />
+                  </Routes>
+                  <Footer />
+                </>
+              }
+            />
+          </Routes>
+          <Toaster />
+        </AdminProvider>
+      </WishlistProvider>
+    </CartProvider>
   );
 }
 

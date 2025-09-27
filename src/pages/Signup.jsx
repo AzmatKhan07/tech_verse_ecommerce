@@ -3,11 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Eye, EyeOff } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { useUser } from "@/context/UserContext";
+import { useSignIn } from "react-auth-kit";
 
 const Signup = () => {
   const navigate = useNavigate();
-  const { login } = useUser();
+  const signIn = useSignIn();
 
   const [formData, setFormData] = useState({
     name: "",
@@ -91,8 +91,9 @@ const Signup = () => {
         avatar: null, // No avatar on signup
       };
 
-      // Log in the user
-      login(userData);
+      // Note: In a real app, you would get the token from the signup response
+      // For now, we'll just redirect to signin
+      console.log("Signup successful, redirecting to signin");
 
       // Redirect to home page
       navigate("/");

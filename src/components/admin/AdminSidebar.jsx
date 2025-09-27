@@ -15,13 +15,18 @@ import {
   Percent,
   Image,
 } from "lucide-react";
-import { useUser } from "@/context/UserContext";
+import { useAuthUser, useSignOut } from "react-auth-kit";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 
 const AdminSidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
-  const { user, logout } = useUser();
+  const user = useAuthUser();
+  const signOut = useSignOut();
+
+  const logout = async () => {
+    signOut();
+  };
 
   const getInitials = (name) => {
     if (!name) return "A";
