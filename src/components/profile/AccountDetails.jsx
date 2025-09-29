@@ -1,10 +1,21 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useUser } from "@/context/UserContext";
+import { useAuthUser } from "react-auth-kit";
 
 const AccountDetails = () => {
-  const { user, updateProfile, updatePassword } = useUser();
+  const user = useAuthUser();
+
+  // Placeholder functions - in a real app, these would make API calls
+  const updateProfile = async (updates) => {
+    console.log("Update profile:", updates);
+    return { success: true };
+  };
+
+  const updatePassword = async (oldPassword, newPassword) => {
+    console.log("Update password:", { oldPassword, newPassword });
+    return { success: true };
+  };
 
   // Account details state
   const [accountForm, setAccountForm] = useState({

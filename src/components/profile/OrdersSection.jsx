@@ -1,9 +1,9 @@
 import React from "react";
-import { useUser } from "@/context/UserContext";
+import { useAuthUser } from "react-auth-kit";
 import OrdersTable from "./OrdersTable";
 
 const OrdersSection = () => {
-  const { user } = useUser();
+  const user = useAuthUser();
 
   return (
     <div className="max-w-4xl">

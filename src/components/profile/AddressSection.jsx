@@ -1,10 +1,19 @@
 import React, { useState } from "react";
-import { useUser } from "@/context/UserContext";
+import { useAuthUser } from "react-auth-kit";
 import AddressCard from "./AddressCard";
 import AddressForm from "./AddressForm";
 
 const AddressSection = () => {
-  const { user, updateAddress, addAddress } = useUser();
+  const user = useAuthUser();
+
+  // Placeholder functions - in a real app, these would make API calls
+  const updateAddress = (type, addressData) => {
+    console.log("Update address:", { type, addressData });
+  };
+
+  const addAddress = (type, addressData) => {
+    console.log("Add address:", { type, addressData });
+  };
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingAddress, setEditingAddress] = useState(null);
   const [addressType, setAddressType] = useState(null);

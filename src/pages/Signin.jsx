@@ -3,12 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Eye, EyeOff, AlertCircle } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { useUser } from "@/context/UserContext";
-import authService from "@/lib/api/services/auth";
+import { useSignIn, useAuthHeader, useAuthUser } from "react-auth-kit";
 
 const Signin = () => {
   const navigate = useNavigate();
-  const { login } = useUser();
+  const signIn = useSignIn();
+  const authHeader = useAuthHeader();
+  const user = useAuthUser();
 
   const [formData, setFormData] = useState({
     email: "",
@@ -71,7 +72,6 @@ const Signin = () => {
       console.log("Login successful:", response);
 
       // Extract user data from API response
-      // Adjust these field names based on your actual API response structure
       const userData = {
         id: response.user?.id || response.id,
         firstName:
@@ -97,8 +97,15 @@ const Signin = () => {
             : true,
       };
 
-      // Log in the user with the data from API
-      login(userData);
+      // Use react-auth-kit's signIn function
+      signIn({
+        token: response.tokens?.access || response.access_token,
+        expiresIn: response.expires_in || 24 * 60 * 60, // 24 hours in seconds
+        tokenType: "Bearer",
+        authState: userData,
+        refreshToken: response.tokens?.refresh || response.refresh_token,
+        refreshTokenExpireIn: response.refresh_expires_in || 7 * 24 * 60 * 60, // 7 days
+      });
 
       // Store remember me preference
       if (formData.rememberMe) {
@@ -107,15 +114,54 @@ const Signin = () => {
         localStorage.removeItem("rememberMe");
       }
 
-      // Redirect to home page or intended destination
-      const intendedPath = localStorage.getItem("intendedPath") || "/";
-      localStorage.removeItem("intendedPath");
-      navigate(intendedPath);
+      // Redirect based on user role
+      if (userData.role === "admin" || userData.role === "staff") {
+        navigate("/admin/dashboard");
+      } else {
+        // Redirect to home page or intended destination
+        const intendedPath = localStorage.getItem("intendedPath") || "/";
+        localStorage.removeItem("intendedPath");
+        navigate(intendedPath);
+      }
     } catch (error) {
       console.error("Signin error:", error);
-      setErrors({
-        general: error.message || "Login failed. Please try again.",
-      });
+
+      // Handle specific error cases
+      if (error.response) {
+        const { status, data } = error.response;
+
+        if (status === 401) {
+          setErrors({
+            general: "Invalid email or password. Please try again.",
+          });
+        } else if (status === 403) {
+          setErrors({
+            general: "Account is deactivated. Please contact support.",
+          });
+        } else if (status === 429) {
+          setErrors({
+            general: "Too many login attempts. Please try again later.",
+          });
+        } else if (status >= 500) {
+          setErrors({
+            general: "Server error. Please try again later.",
+          });
+        } else if (data && data.message) {
+          setErrors({ general: data.message });
+        } else {
+          setErrors({
+            general: "Login failed. Please check your credentials.",
+          });
+        }
+      } else if (error.message === "Network Error") {
+        setErrors({
+          general: "Network error. Please check your connection.",
+        });
+      } else {
+        setErrors({
+          general: "An unexpected error occurred. Please try again.",
+        });
+      }
     } finally {
       setIsLoading(false);
     }
