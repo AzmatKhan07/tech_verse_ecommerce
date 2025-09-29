@@ -1,4 +1,12 @@
 import React, { createContext, useContext, useReducer, useEffect } from "react";
+import {
+  useCartItems,
+  useAddToCart,
+  useUpdateCartItem,
+  useDeleteCartItem,
+  useClearCart,
+} from "@/lib/query/hooks/useCart";
+import { useUser } from "@/context/UserContext";
 
 // Cart action types
 const CART_ACTIONS = {
@@ -91,54 +99,165 @@ const CartContext = createContext();
 // Cart Provider Component
 export const CartProvider = ({ children }) => {
   const [state, dispatch] = useReducer(cartReducer, initialState);
+  const { user } = useUser();
 
-  // Load cart from localStorage on mount
+  // API hooks - only use when user is logged in
+  const {
+    data: apiCartData,
+    isLoading: cartLoading,
+    error: cartError,
+  } = useCartItems(user?.id);
+  const addToCartMutation = useAddToCart();
+  const updateCartItemMutation = useUpdateCartItem();
+  const deleteCartItemMutation = useDeleteCartItem();
+  const clearCartMutation = useClearCart();
+
+  // Load cart from API when user is logged in, otherwise from localStorage
   useEffect(() => {
-    const savedCart = localStorage.getItem("cart");
-    if (savedCart) {
-      try {
-        const cartData = JSON.parse(savedCart);
-        dispatch({
-          type: CART_ACTIONS.LOAD_CART,
-          payload: { items: cartData.items || [] },
-        });
-      } catch (error) {
-        console.error("Error loading cart from localStorage:", error);
+    if (user && apiCartData !== undefined) {
+      // Transform API cart data to match local cart structure
+      const transformedItems = Array.isArray(apiCartData)
+        ? apiCartData.map((item) => ({
+            id: item.id,
+            product_id: item.product,
+            product_attr_id: item.product_attr,
+            name: item.product_name || "Product",
+            price: item.price || 0,
+            image: item.product_image || "/placeholder-product.jpg",
+            quantity: item.qty || 1,
+            user_id: item.user_id,
+            user_type: item.user_type,
+          }))
+        : [];
+
+      dispatch({
+        type: CART_ACTIONS.LOAD_CART,
+        payload: { items: transformedItems },
+      });
+    } else if (!user) {
+      // Load from localStorage when not logged in
+      const savedCart = localStorage.getItem("cart");
+      if (savedCart) {
+        try {
+          const cartData = JSON.parse(savedCart);
+          dispatch({
+            type: CART_ACTIONS.LOAD_CART,
+            payload: { items: cartData.items || [] },
+          });
+        } catch (error) {
+          console.error("Error loading cart from localStorage:", error);
+        }
       }
     }
-  }, []);
+  }, [user, apiCartData]);
 
-  // Save cart to localStorage whenever cart changes
+  // Save cart to localStorage when not logged in
   useEffect(() => {
-    localStorage.setItem("cart", JSON.stringify(state));
-  }, [state]);
+    if (!user) {
+      localStorage.setItem("cart", JSON.stringify(state));
+    }
+  }, [state, user]);
 
   // Cart actions
-  const addToCart = (product, quantity = 1) => {
-    dispatch({
-      type: CART_ACTIONS.ADD_ITEM,
-      payload: { product, quantity },
-    });
+  const addToCart = async (product, quantity = 1, selectedAttribute = null) => {
+    if (user) {
+      // Use API when user is logged in
+      try {
+        const cartData = {
+          user_id: user.id,
+          user_type: "Reg", // Regular user type
+          qty: quantity,
+          product: product.id,
+          product_attr:
+            selectedAttribute?.id || product.attributes?.[0]?.id || null,
+        };
+
+        await addToCartMutation.mutateAsync(cartData);
+      } catch (error) {
+        console.error("Failed to add item to cart via API:", error);
+        throw error;
+      }
+    } else {
+      // Use local state when not logged in
+      dispatch({
+        type: CART_ACTIONS.ADD_ITEM,
+        payload: { product, quantity },
+      });
+    }
   };
 
-  const removeFromCart = (productId) => {
-    dispatch({
-      type: CART_ACTIONS.REMOVE_ITEM,
-      payload: { id: productId },
-    });
+  const removeFromCart = async (productId) => {
+    if (user) {
+      // Use API when user is logged in
+      try {
+        const cartItem = state.items.find(
+          (item) => item.product_id === productId
+        );
+        if (cartItem) {
+          await deleteCartItemMutation.mutateAsync(cartItem.id);
+        }
+      } catch (error) {
+        console.error("Failed to remove item from cart via API:", error);
+        throw error;
+      }
+    } else {
+      // Use local state when not logged in
+      dispatch({
+        type: CART_ACTIONS.REMOVE_ITEM,
+        payload: { id: productId },
+      });
+    }
   };
 
-  const updateQuantity = (productId, quantity) => {
-    dispatch({
-      type: CART_ACTIONS.UPDATE_QUANTITY,
-      payload: { id: productId, quantity },
-    });
+  const updateQuantity = async (productId, quantity) => {
+    if (user) {
+      // Use API when user is logged in
+      try {
+        const cartItem = state.items.find(
+          (item) => item.product_id === productId
+        );
+        if (cartItem) {
+          const cartData = {
+            user_id: user.id,
+            user_type: "Reg",
+            qty: quantity,
+            product: cartItem.product_id,
+            product_attr: cartItem.product_attr_id,
+          };
+
+          await updateCartItemMutation.mutateAsync({
+            cartItemId: cartItem.id,
+            cartData,
+          });
+        }
+      } catch (error) {
+        console.error("Failed to update cart item via API:", error);
+        throw error;
+      }
+    } else {
+      // Use local state when not logged in
+      dispatch({
+        type: CART_ACTIONS.UPDATE_QUANTITY,
+        payload: { id: productId, quantity },
+      });
+    }
   };
 
-  const clearCart = () => {
-    dispatch({
-      type: CART_ACTIONS.CLEAR_CART,
-    });
+  const clearCart = async () => {
+    if (user) {
+      // Use API when user is logged in
+      try {
+        await clearCartMutation.mutateAsync();
+      } catch (error) {
+        console.error("Failed to clear cart via API:", error);
+        throw error;
+      }
+    } else {
+      // Use local state when not logged in
+      dispatch({
+        type: CART_ACTIONS.CLEAR_CART,
+      });
+    }
   };
 
   // Computed values
@@ -152,11 +271,15 @@ export const CartProvider = ({ children }) => {
   }, 0);
 
   const isInCart = (productId) => {
-    return state.items.some((item) => item.id === productId);
+    return state.items.some((item) =>
+      user ? item.product_id === productId : item.id === productId
+    );
   };
 
   const getCartItemQuantity = (productId) => {
-    const item = state.items.find((item) => item.id === productId);
+    const item = state.items.find((item) =>
+      user ? item.product_id === productId : item.id === productId
+    );
     return item ? item.quantity : 0;
   };
 
@@ -166,6 +289,8 @@ export const CartProvider = ({ children }) => {
     cartItems: state.items,
     cartItemsCount,
     cartTotal,
+    cartLoading,
+    cartError,
 
     // Actions
     addToCart,

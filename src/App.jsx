@@ -27,6 +27,7 @@ import AdminColor from "./pages/AdminColor";
 import AdminSize from "./pages/AdminSize";
 import AdminTaxes from "./pages/AdminTaxes";
 import AdminHomeBanner from "./pages/AdminHomeBanner";
+import AdminOrderStatus from "./pages/AdminOrderStatus";
 
 function App() {
   return (

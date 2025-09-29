@@ -12,17 +12,45 @@ import { Loader2 } from "lucide-react";
 
 const Shop = () => {
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedCategory, setSelectedCategory] = useState("all");
-  const [selectedPrice, setSelectedPrice] = useState("all-price");
   const [selectedSort, setSelectedSort] = useState("default");
-  const [searchTerm, setSearchTerm] = useState("");
+  const [filters, setFilters] = useState({
+    priceRange: [2, 90],
+    category: "all",
+    sizes: [],
+    stockStatus: {
+      inStock: false,
+      outOfStock: false,
+      onBackorder: false,
+    },
+    ratingFilter: {
+      fiveOnly: false,
+      fourAndUp: false,
+      threeAndUp: false,
+      twoAndUp: false,
+      oneAndUp: false,
+    },
+    colors: [],
+    brands: [],
+  });
 
-  // Build query parameters for API
+  // Build query parameters for advanced search API
   const queryParams = {
     page: currentPage,
     page_size: 12, // Show 12 products per page
-    ...(selectedCategory !== "all" && { category: selectedCategory }),
-    ...(searchTerm && { search: searchTerm }),
+    ...(filters.category !== "all" && { category: filters.category }),
+    ...(filters.sizes.length > 0 && { size: filters.sizes.join(",") }),
+    ...(filters.colors.length > 0 && { color: filters.colors.join(",") }),
+    ...(filters.brands.length > 0 && { brand: filters.brands.join(",") }),
+    ...(filters.priceRange[0] > 2 && { min_price: filters.priceRange[0] }),
+    ...(filters.priceRange[1] < 90 && { max_price: filters.priceRange[1] }),
+    ...(filters.stockStatus.inStock && { in_stock: true }),
+    ...(filters.stockStatus.outOfStock && { out_of_stock: true }),
+    ...(filters.stockStatus.onBackorder && { on_backorder: true }),
+    ...(filters.ratingFilter.fiveOnly && { rating: 5 }),
+    ...(filters.ratingFilter.fourAndUp && { rating: 4 }),
+    ...(filters.ratingFilter.threeAndUp && { rating: 3 }),
+    ...(filters.ratingFilter.twoAndUp && { rating: 2 }),
+    ...(filters.ratingFilter.oneAndUp && { rating: 1 }),
     ...(selectedSort !== "default" && { ordering: selectedSort }),
   };
 
@@ -46,25 +74,37 @@ const Shop = () => {
   const totalCount = pagination.count;
   const totalPages = pagination.totalPages;
 
-  // Debounced search effect - reset to page 1 when search changes
+  // Reset to page 1 when filters change
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (currentPage !== 1) {
-        setCurrentPage(1);
-      }
-    }, 500);
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+    }
+  }, [filters]);
 
-    return () => clearTimeout(timeoutId);
-  }, [searchTerm]);
-
-  const handleCategoryChange = (category) => {
-    setSelectedCategory(category);
-    setCurrentPage(1); // Reset to first page when filter changes
+  const handleFiltersChange = (newFilters) => {
+    setFilters(newFilters);
   };
 
-  const handlePriceChange = (price) => {
-    setSelectedPrice(price);
-    setCurrentPage(1); // Reset to first page when filter changes
+  const handleClearFilters = () => {
+    setFilters({
+      priceRange: [2, 90],
+      category: "all",
+      sizes: [],
+      stockStatus: {
+        inStock: false,
+        outOfStock: false,
+        onBackorder: false,
+      },
+      ratingFilter: {
+        fiveOnly: false,
+        fourAndUp: false,
+        threeAndUp: false,
+        twoAndUp: false,
+        oneAndUp: false,
+      },
+      colors: [],
+      brands: [],
+    });
   };
 
   const handleSortChange = (sort) => {
@@ -73,10 +113,6 @@ const Shop = () => {
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
-  };
-
-  const handleSearchChange = (search) => {
-    setSearchTerm(search);
   };
 
   const handleShowMore = () => {
@@ -93,75 +129,84 @@ const Shop = () => {
         {/* Shop Content */}
         <section className="py-12">
           <div className="container mx-auto px-4">
-            {/* Filters */}
-            <div className="flex justify-between">
+            <div className="flex flex-col lg:flex-row gap-8">
+              {/* Left Sidebar - Filters */}
               <ShopFilters
-                onCategoryChange={handleCategoryChange}
-                onPriceChange={handlePriceChange}
-                onSearchChange={handleSearchChange}
-                searchTerm={searchTerm}
+                onFiltersChange={handleFiltersChange}
+                onClearFilters={handleClearFilters}
               />
 
-              {/* Controls */}
-              <ShopControls onSortChange={handleSortChange} />
-            </div>
+              {/* Main Content */}
+              <div className="flex-1">
+                {/* Controls */}
+                <div className="mb-6">
+                  <ShopControls onSortChange={handleSortChange} />
+                </div>
 
-            {/* Error Message */}
-            {error && (
-              <div className="text-center py-8">
-                <p className="text-red-500 mb-4">
-                  {error.message ||
-                    "Failed to load products. Please try again."}
-                </p>
-                <button
-                  onClick={() => refetch()}
-                  className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800"
-                >
-                  Retry
-                </button>
-              </div>
-            )}
-
-            {/* Products Grid */}
-            {isLoading ? (
-              <div className={`grid grid-cols-1 lg:grid-cols-4 gap-6`}>
-                {Array.from({ length: 12 }, (_, i) => (
-                  <div key={i} className="space-y-4">
-                    <Skeleton className="h-[300px] w-full rounded-lg" />
-                    <div className="space-y-2">
-                      <Skeleton className="h-4 w-3/4" />
-                      <Skeleton className="h-4 w-1/2" />
-                    </div>
+                {/* Error Message */}
+                {error && (
+                  <div className="text-center py-8">
+                    <p className="text-red-500 mb-4">
+                      {error.message ||
+                        "Failed to load products. Please try again."}
+                    </p>
+                    <button
+                      onClick={() => refetch()}
+                      className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800"
+                    >
+                      Retry
+                    </button>
                   </div>
-                ))}
-              </div>
-            ) : products.length > 0 ? (
-              <div className={`grid grid-cols-1 lg:grid-cols-4 gap-6`}>
-                {products.map((product) => (
-                  <ShopProductCard key={product.id} product={product} />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <p className="text-gray-500 text-lg">
-                  No products found matching your criteria.
-                </p>
-                <p className="text-gray-400 text-sm mt-2">
-                  Try adjusting your filters or search terms.
-                </p>
-              </div>
-            )}
+                )}
 
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <ShopPagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                totalCount={totalCount}
-                onPageChange={handlePageChange}
-                onShowMore={handleShowMore}
-              />
-            )}
+                {/* Products Grid */}
+                {isLoading ? (
+                  <div
+                    className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6`}
+                  >
+                    {Array.from({ length: 12 }, (_, i) => (
+                      <div key={i} className="space-y-4">
+                        <Skeleton className="h-[300px] w-full rounded-lg" />
+                        <div className="space-y-2">
+                          <Skeleton className="h-4 w-3/4" />
+                          <Skeleton className="h-4 w-1/2" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : products.length > 0 ? (
+                  <div
+                    className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6`}
+                  >
+                    {products.map((product) => (
+                      <ShopProductCard key={product.id} product={product} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <p className="text-gray-500 text-lg">
+                      No products found matching your criteria.
+                    </p>
+                    <p className="text-gray-400 text-sm mt-2">
+                      Try adjusting your filters or search terms.
+                    </p>
+                  </div>
+                )}
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="mt-8">
+                    <ShopPagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      totalCount={totalCount}
+                      onPageChange={handlePageChange}
+                      onShowMore={handleShowMore}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </section>
       </main>

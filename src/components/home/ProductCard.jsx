@@ -6,6 +6,7 @@ import { Star, ShoppingCartIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
+import { useToast } from "@/lib/hooks/use-toast";
 
 /**
  * ProductCard Component
@@ -25,6 +26,7 @@ import { useWishlist } from "@/context/WishlistContext";
  */
 const ProductCard = ({ product, className = "" }) => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const { addToCart, isInCart } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
 
@@ -91,10 +93,26 @@ const ProductCard = ({ product, className = "" }) => {
     ));
   };
 
-  const handleAddToCart = (e) => {
+  const handleAddToCart = async (e) => {
     e.preventDefault();
     e.stopPropagation();
-    addToCart(product, 1);
+    try {
+      // Get the first available attribute for the product
+      const selectedAttribute = product.attributes?.[0] || null;
+      await addToCart(product, 1, selectedAttribute);
+      toast({
+        title: "Added to Cart",
+        description: `${name} has been added to your cart.`,
+        variant: "success",
+      });
+    } catch (error) {
+      console.error("Failed to add product to cart:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add product to cart. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
