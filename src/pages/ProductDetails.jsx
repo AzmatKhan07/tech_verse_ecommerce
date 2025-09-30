@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { ChevronRight, ArrowLeft } from "lucide-react";
 import Navbar from "@/components/common/Navbar";
@@ -15,8 +15,27 @@ const ProductDetails = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
 
+  // State for selected variant
+  const [selectedVariant, setSelectedVariant] = useState(null);
+  // State to track if user has manually selected a variant
+  const [userSelectedVariant, setUserSelectedVariant] = useState(false);
+
   // Fetch product data from API
   const { data: product, isLoading, error, refetch } = useProduct(slug);
+
+  // Set default variant (first attribute) but show main image initially
+  useEffect(() => {
+    if (product && product.attributes && product.attributes.length > 0) {
+      setSelectedVariant(product.attributes[0]);
+      setUserSelectedVariant(false); // Reset user selection flag
+    }
+  }, [product]);
+
+  // Custom variant selection handler
+  const handleVariantSelect = (variant) => {
+    setSelectedVariant(variant);
+    setUserSelectedVariant(true); // Mark that user has manually selected a variant
+  };
 
   // Transform API data to match component expectations
   const transformedProduct = product
@@ -27,17 +46,22 @@ const ProductDetails = () => {
         rating: parseFloat(product.avg_rating) || 0,
         reviewCount: parseInt(product.review_count) || 0,
         description: product.desc || product.short_desc || "",
-        price: getMinPrice(product.attributes),
-        originalPrice: getMaxMrp(product.attributes),
+        price: selectedVariant
+          ? parseFloat(selectedVariant.price) || 0
+          : getMinPrice(product.attributes),
+        originalPrice: selectedVariant
+          ? parseFloat(selectedVariant.mrp) || null
+          : getMaxMrp(product.attributes),
         offerTimer: { days: 2, hours: 12, minutes: 45, seconds: 5 }, // Static for now
         measurements: product.technical_specification || "",
-        sku: product.attributes?.[0]?.sku || "",
+        sku: selectedVariant?.sku || product.attributes?.[0]?.sku || "",
         category: product.category_name || "",
         badges: getProductBadges(product),
-        images: getProductImages(product),
+        images: getProductImages(product, selectedVariant, userSelectedVariant),
         colors: getProductColors(product.attributes),
         sizes: getProductSizes(product.attributes),
         attributes: product.attributes || [],
+        selectedVariant: selectedVariant,
         brand: product.brand_name || "",
         model: product.model || "",
         keywords: product.keywords || "",
@@ -79,14 +103,27 @@ const ProductDetails = () => {
     return badges;
   }
 
-  function getProductImages(product) {
+  function getProductImages(product, selectedVariant, userSelectedVariant) {
     const images = [];
 
-    // Add main image
+    // Add main product image first (this will be the default selected image)
     if (product.image) {
       images.push({
         url: product.image,
         alt: `${product.name} - Main View`,
+        isMain: true, // Mark as main image
+      });
+    }
+
+    // If a variant is selected and has an image, and user has manually selected it, add it after main image
+    if (selectedVariant && selectedVariant.attr_image && userSelectedVariant) {
+      images.push({
+        url: selectedVariant.attr_image,
+        alt: `${product.name} - ${
+          selectedVariant.color_name || "Selected Variant"
+        }`,
+        isVariant: true,
+        variantId: selectedVariant.id,
       });
     }
 
@@ -102,13 +139,18 @@ const ProductDetails = () => {
       });
     }
 
-    // Add attribute images
+    // Add other variant images (excluding the selected one)
     if (product.attributes && product.attributes.length > 0) {
       product.attributes.forEach((attr, index) => {
-        if (attr.attr_image) {
+        if (attr.attr_image && attr.id !== selectedVariant?.id) {
           images.push({
             url: attr.attr_image,
-            alt: `${product.name} - Variant ${index + 1}`,
+            alt: `${product.name} - ${
+              attr.color_name || `Variant ${index + 1}`
+            }`,
+            isVariant: true,
+            variantId: attr.id,
+            variantData: attr,
           });
         }
       });
@@ -156,50 +198,6 @@ const ProductDetails = () => {
 
     return Array.from(sizeMap.values());
   }
-
-  // Sample reviews data - Replace with actual data from API/database
-  const reviews = [
-    {
-      id: 1,
-      name: "Sofia Harvetz",
-      avatar:
-        "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&auto=format",
-      rating: 5,
-      text: "I bought it 3 weeks ago and now come back just to say 'Awesome Product'. I really enjoy it. At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupt et quas molestias excepturi sint non provident.",
-    },
-    {
-      id: 2,
-      name: "Nicolas Jensen",
-      avatar:
-        "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&auto=format",
-      rating: 5,
-      text: "I bought it 3 weeks ago and now come back just to say 'Awesome Product'. I really enjoy it. At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupt et quas molestias excepturi sint non provident.",
-    },
-    {
-      id: 3,
-      name: "Nicolas Jensen",
-      avatar:
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&auto=format",
-      rating: 5,
-      text: "I bought it 3 weeks ago and now come back just to say 'Awesome Product'. I really enjoy it. At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupt et quas molestias excepturi sint non provident.",
-    },
-    {
-      id: 4,
-      name: "Nicolas Jensen",
-      avatar:
-        "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&auto=format",
-      rating: 5,
-      text: "I bought it 3 weeks ago and now come back just to say 'Awesome Product'. I really enjoy it. At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupt et quas molestias excepturi sint non provident.",
-    },
-    {
-      id: 5,
-      name: "Nicolas Jensen",
-      avatar:
-        "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop&auto=format",
-      rating: 5,
-      text: "I bought it 3 weeks ago and now come back just to say 'Awesome Product'. I really enjoy it. At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupt et quas molestias excepturi sint non provident.",
-    },
-  ];
 
   // Loading state
   if (isLoading) {
@@ -383,12 +381,19 @@ const ProductDetails = () => {
             <div className="grid lg:grid-cols-2 gap-12">
               {/* Product Images */}
               <div>
-                <ProductImageGallery product={transformedProduct} />
+                <ProductImageGallery
+                  product={transformedProduct}
+                  onVariantSelect={handleVariantSelect}
+                />
               </div>
 
               {/* Product Information */}
               <div>
-                <ProductInfo product={transformedProduct} />
+                <ProductInfo
+                  product={transformedProduct}
+                  selectedVariant={selectedVariant}
+                  onVariantSelect={handleVariantSelect}
+                />
               </div>
             </div>
           </div>
@@ -397,7 +402,7 @@ const ProductDetails = () => {
         {/* Product Tabs */}
         <section className="py-12 bg-gray-50">
           <div className="container mx-auto px-4">
-            <ProductTabs product={transformedProduct} reviews={reviews} />
+            <ProductTabs product={transformedProduct} />
           </div>
         </section>
       </main>

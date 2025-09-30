@@ -7,14 +7,54 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MessageSquare, ThumbsUp } from "lucide-react";
+import { MessageSquare, ThumbsUp, Star, User } from "lucide-react";
+import { useProductReviews } from "@/lib/query/hooks/useReviews";
+import ReviewForm from "./ReviewForm";
+import { Skeleton } from "@/components/ui/skeleton";
 
 /**
  * ProductTabs Component
  * Displays tabbed content for Additional Info, Questions, and Reviews
  */
-const ProductTabs = ({ product, reviews }) => {
+const ProductTabs = ({ product }) => {
   const [activeTab, setActiveTab] = useState("reviews");
+  const [sortBy, setSortBy] = useState("newest");
+
+  // Fetch reviews for the product
+  const {
+    data: reviewsData,
+    isLoading: reviewsLoading,
+    error: reviewsError,
+    refetch: refetchReviews,
+  } = useProductReviews(product?.id, {
+    page_size: 10,
+    status: true, // Only show approved reviews
+  });
+
+  const reviews = reviewsData?.results || reviewsData || [];
+
+  // Helper function to convert rating text to number of stars
+  const getRatingStars = (rating) => {
+    const ratingMap = {
+      Excellent: 5,
+      Good: 4,
+      Average: 3,
+      Poor: 2,
+      "Very Poor": 1,
+    };
+    return ratingMap[rating] || 0;
+  };
+
+  // Helper function to format date
+  const formatDate = (dateString) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
 
   const tabs = [
     {
@@ -133,10 +173,10 @@ const ProductTabs = ({ product, reviews }) => {
             <div className="flex items-center gap-2">
               <h4 className="font-semibold text-lg">Customer Reviews</h4>
               <span className="text-sm text-gray-600">
-                ({reviews?.length || 0} reviews)
+                ({reviewsData?.count || reviews?.length || 0} reviews)
               </span>
             </div>
-            <Select defaultValue="newest">
+            <Select value={sortBy} onValueChange={setSortBy}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Sort reviews" />
               </SelectTrigger>
@@ -149,88 +189,117 @@ const ProductTabs = ({ product, reviews }) => {
             </Select>
           </div>
 
-          {/* Review Input */}
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-sm font-medium">Rate this product:</span>
-              <div className="flex gap-1">
-                {["😡", "😞", "😐", "😊", "😍"].map((emoji, index) => (
-                  <button
-                    key={index}
-                    className="text-lg hover:scale-110 transition-transform"
-                  >
-                    {emoji}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="flex gap-3 border border-gray-300 rounded-full px-3 py-2 text-sm">
-              <input
-                type="text"
-                placeholder="Write your review..."
-                className="flex-1 outline-0 pl-3"
-              />
-              <Button size="lg" className="rounded-full">
-                Write Review
-              </Button>
-            </div>
-          </div>
+          {/* Review Form */}
+          <ReviewForm
+            productId={product?.id}
+            onSuccess={() => refetchReviews()}
+          />
 
           {/* Reviews List */}
           <div className="space-y-6">
-            {reviews?.slice(0, 3).map((review, index) => (
-              <div key={index} className="border-b border-gray-200 pb-6">
-                <div className="flex items-start gap-4">
-                  <img
-                    src={review.avatar}
-                    alt={review.name}
-                    className="w-12 h-12 rounded-full object-cover"
-                  />
-                  <div className="flex-1">
-                    <div className="flex flex-col  mb-2">
-                      <h5 className="font-medium">{review.name}</h5>
-                      <div className="flex">
-                        {Array.from({ length: 5 }, (_, i) => (
-                          <span
-                            key={i}
-                            className={`w-5 h-5 ${
-                              i < review.rating ? "text-black" : "text-gray-300"
-                            }`}
-                          >
-                            ★
-                          </span>
-                        ))}
+            {reviewsLoading ? (
+              // Loading skeleton
+              Array.from({ length: 3 }).map((_, index) => (
+                <div key={index} className="border-b border-gray-200 pb-6">
+                  <div className="flex items-start gap-4">
+                    <Skeleton className="w-12 h-12 rounded-full" />
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Skeleton className="h-4 w-24" />
+                        <div className="flex gap-1">
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <Skeleton key={i} className="w-4 h-4" />
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                    <p className="text-sm text-gray-700 leading-relaxed">
-                      {review.text}
-                    </p>
-                    <div className="flex gap-4 mt-3">
-                      <Button
-                        variant={"outline"}
-                        className={
-                          "rounded-full hover:bg-blue-500 hover:text-white transition-all duration-300 cursor-pointer"
-                        }
-                      >
-                        <ThumbsUp />
-                        Like
-                      </Button>
-                      <Button
-                        variant={"outline"}
-                        className={
-                          "rounded-full hover:bg-yellow-500 hover:text-white transition-all duration-300 cursor-pointer"
-                        }
-                      >
-                        <MessageSquare /> Reply
-                      </Button>
+                      <Skeleton className="h-16 w-full" />
                     </div>
                   </div>
                 </div>
+              ))
+            ) : reviewsError ? (
+              <div className="text-center py-8">
+                <p className="text-red-500 mb-4">
+                  Error loading reviews: {reviewsError.message}
+                </p>
+                <Button onClick={() => refetchReviews()} variant="outline">
+                  Try Again
+                </Button>
               </div>
-            ))}
+            ) : reviews.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Star className="w-8 h-8 text-gray-400" />
+                </div>
+                <h5 className="font-medium text-gray-900 mb-2">
+                  No reviews yet
+                </h5>
+                <p className="text-sm text-gray-600">
+                  Be the first to review this product!
+                </p>
+              </div>
+            ) : (
+              reviews.map((review) => (
+                <div key={review.id} className="border-b border-gray-200 pb-6">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
+                      <User className="w-6 h-6 text-gray-400" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex flex-col mb-2">
+                        <h5 className="font-medium">
+                          {review.customer_name || "Anonymous"}
+                        </h5>
+                        <div className="flex items-center gap-2">
+                          <div className="flex">
+                            {Array.from({ length: 5 }, (_, i) => (
+                              <Star
+                                key={i}
+                                className={`w-4 h-4 ${
+                                  i < getRatingStars(review.rating)
+                                    ? "text-yellow-400 fill-current"
+                                    : "text-gray-300"
+                                }`}
+                              />
+                            ))}
+                          </div>
+                          <span className="text-sm text-gray-600">
+                            {review.rating}
+                          </span>
+                          <span className="text-sm text-gray-500">
+                            • {formatDate(review.added_on)}
+                          </span>
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-700 leading-relaxed">
+                        {review.review}
+                      </p>
+                      <div className="flex gap-4 mt-3">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="rounded-full hover:bg-blue-500 hover:text-white transition-all duration-300"
+                        >
+                          <ThumbsUp className="w-4 h-4 mr-1" />
+                          Like
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="rounded-full hover:bg-yellow-500 hover:text-white transition-all duration-300"
+                        >
+                          <MessageSquare className="w-4 h-4 mr-1" />
+                          Reply
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
 
-          {reviews?.length > 3 && (
+          {reviewsData?.next && (
             <Button variant="outline" className="w-full">
               Load More Reviews
             </Button>
