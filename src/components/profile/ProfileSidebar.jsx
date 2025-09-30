@@ -1,11 +1,12 @@
 import React from "react";
-import { useUser } from "@/context/UserContext";
+import { useAuthUser, useSignOut } from "react-auth-kit";
 import { useNavigate, useLocation } from "react-router-dom";
 import { User, MapPin, Package, Heart, LogOut, Edit } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 const ProfileSidebar = ({ activeSection, onSectionChange }) => {
-  const { user, logout } = useUser();
+  const user = useAuthUser();
+  const signOut = useSignOut();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -29,7 +30,7 @@ const ProfileSidebar = ({ activeSection, onSectionChange }) => {
 
   const handleMenuClick = (itemId) => {
     if (itemId === "logout") {
-      logout();
+      signOut();
       navigate("/");
     } else {
       onSectionChange(itemId);
