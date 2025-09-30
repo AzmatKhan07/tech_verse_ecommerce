@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -7,12 +7,29 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
  * ProductImageGallery Component
  * Displays product images with thumbnails, badges, navigation arrows, and zoom functionality
  */
-const ProductImageGallery = ({ product }) => {
+const ProductImageGallery = ({ product, onVariantSelect }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isZooming, setIsZooming] = useState(false);
   const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 });
 
   const { images = [], badges = [], name = "Tray Table" } = product;
+
+  // Reset to main product image when product changes, but preserve variant selection
+  useEffect(() => {
+    if (images.length > 0) {
+      // Check if there's a selected variant image (at index 1 after main image)
+      const hasSelectedVariant =
+        images.length > 1 && images[1] && images[1].isVariant;
+
+      if (hasSelectedVariant) {
+        // Show the selected variant image
+        setCurrentImageIndex(1);
+      } else {
+        // Always show main product image (index 0) when no variant is selected or user hasn't selected one
+        setCurrentImageIndex(0);
+      }
+    }
+  }, [images]);
 
   const nextImage = () => {
     setCurrentImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
@@ -23,7 +40,22 @@ const ProductImageGallery = ({ product }) => {
   };
 
   const selectImage = (index) => {
-    setCurrentImageIndex(index);
+    const selectedImage = images[index];
+
+    // If this is a variant image, select the variant
+    if (
+      selectedImage &&
+      selectedImage.isVariant &&
+      selectedImage.variantData &&
+      onVariantSelect
+    ) {
+      onVariantSelect(selectedImage.variantData);
+      // The useEffect will handle updating the currentImageIndex
+      // to show the selected variant image
+    } else {
+      // For non-variant images, just update the index
+      setCurrentImageIndex(index);
+    }
   };
 
   // Handle mouse movement for zoom effect
@@ -120,7 +152,7 @@ const ProductImageGallery = ({ product }) => {
             <button
               key={index}
               onClick={() => selectImage(index)}
-              className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all duration-200 ${
+              className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all duration-200 relative ${
                 currentImageIndex === index
                   ? "border-black"
                   : "border-gray-200 hover:border-gray-300"
@@ -132,6 +164,10 @@ const ProductImageGallery = ({ product }) => {
                 className="w-full h-full object-cover object-center"
                 loading="lazy"
               />
+              {/* Variant indicator */}
+              {image.isVariant && (
+                <div className="absolute top-1 right-1 w-3 h-3 bg-blue-500 rounded-full border border-white"></div>
+              )}
             </button>
           ))}
         </div>

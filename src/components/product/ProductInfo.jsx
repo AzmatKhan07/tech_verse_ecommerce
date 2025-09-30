@@ -8,7 +8,7 @@ import { useCart } from "@/context/CartContext";
  * ProductInfo Component
  * Displays product information, pricing, options, and action buttons with dynamic countdown timer
  */
-const ProductInfo = ({ product }) => {
+const ProductInfo = ({ product, selectedVariant, onVariantSelect }) => {
   const { addToCart, isInCart } = useCart();
   const [selectedColor, setSelectedColor] = useState(0);
   const [quantity, setQuantity] = useState(1);
@@ -51,6 +51,7 @@ const ProductInfo = ({ product }) => {
     ],
     sku = "1117",
     category = "Living Room, Bedroom",
+    attributes = [],
   } = product;
 
   // Format price to currency
@@ -60,6 +61,66 @@ const ProductInfo = ({ product }) => {
       currency: "USD",
       minimumFractionDigits: 2,
     }).format(amount);
+  };
+
+  // Get color hex code from color name
+  const getColorFromName = (colorName) => {
+    if (!colorName) return "#cccccc";
+
+    const colorMap = {
+      black: "#000000",
+      white: "#ffffff",
+      red: "#ff0000",
+      blue: "#0000ff",
+      green: "#00ff00",
+      yellow: "#ffff00",
+      orange: "#ffa500",
+      purple: "#800080",
+      pink: "#ffc0cb",
+      gray: "#808080",
+      grey: "#808080",
+      brown: "#a52a2a",
+      navy: "#000080",
+      maroon: "#800000",
+      olive: "#808000",
+      lime: "#00ff00",
+      aqua: "#00ffff",
+      teal: "#008080",
+      silver: "#c0c0c0",
+      gold: "#ffd700",
+      beige: "#f5f5dc",
+      tan: "#d2b48c",
+      cream: "#fffdd0",
+      ivory: "#fffff0",
+      coral: "#ff7f50",
+      salmon: "#fa8072",
+      turquoise: "#40e0d0",
+      lavender: "#e6e6fa",
+      magenta: "#ff00ff",
+      cyan: "#00ffff",
+      indigo: "#4b0082",
+      violet: "#ee82ee",
+      khaki: "#f0e68c",
+      plum: "#dda0dd",
+      mint: "#f5fffa",
+      peach: "#ffcba4",
+      rose: "#ff69b4",
+      sky: "#87ceeb",
+      forest: "#228b22",
+      emerald: "#50c878",
+      ruby: "#e0115f",
+      sapphire: "#0f52ba",
+      amber: "#ffbf00",
+      jade: "#00a86b",
+      pearl: "#f8f6f0",
+      charcoal: "#36454f",
+      slate: "#708090",
+      steel: "#4682b4",
+      bronze: "#cd7f32",
+      copper: "#b87333",
+    };
+
+    return colorMap[colorName.toLowerCase()] || "#cccccc";
   };
 
   // Generate star rating
@@ -77,12 +138,22 @@ const ProductInfo = ({ product }) => {
   };
 
   const handleAddToCart = () => {
-    // Create product object with selected options
+    // Create product object with selected variant
     const productToAdd = {
       ...product,
-      selectedColor: colors[selectedColor],
-      color: colors[selectedColor].name,
-      image: colors[selectedColor].image || product.images?.[0]?.url,
+      selectedVariant: selectedVariant,
+      selectedColor: selectedVariant
+        ? { name: selectedVariant.color_name }
+        : colors[selectedColor],
+      color: selectedVariant
+        ? selectedVariant.color_name
+        : colors[selectedColor].name,
+      image:
+        selectedVariant?.attr_image ||
+        colors[selectedColor].image ||
+        product.images?.[0]?.url,
+      price: selectedVariant ? parseFloat(selectedVariant.price) : price,
+      sku: selectedVariant?.sku || sku,
     };
 
     addToCart(productToAdd, quantity);
@@ -130,46 +201,99 @@ const ProductInfo = ({ product }) => {
         )}
       </div>
 
-      {/* Dynamic Offer Timer */}
+      {/* Variant Selection */}
+      {attributes.length > 0 && (
+        <div>
+          <div className="flex flex-col items-start justify-between mb-5">
+            <span className="text-sm font-medium">Choose Variant :</span>
+            <span className="text-lg font-bold mt-2">
+              {selectedVariant
+                ? selectedVariant.color_name || `Variant ${selectedVariant.id}`
+                : "Select a variant to see details"}
+            </span>
+          </div>
+          <div className="flex gap-3 flex-wrap">
+            {attributes.map((variant, index) => (
+              <button
+                key={variant.id || index}
+                onClick={() => onVariantSelect && onVariantSelect(variant)}
+                className={`w-16 h-16 rounded-lg overflow-hidden border-2 transition-all duration-200 relative ${
+                  selectedVariant?.id === variant.id
+                    ? "border-black ring-2 ring-black ring-offset-2"
+                    : "border-gray-200 hover:border-gray-300"
+                }`}
+              >
+                {variant.attr_image ? (
+                  <img
+                    src={variant.attr_image}
+                    alt={variant.color_name || `Variant ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div
+                    className="w-full h-full flex items-center justify-center text-xs text-white font-medium"
+                    style={{
+                      backgroundColor:
+                        getColorFromName(variant.color_name) || "#cccccc",
+                    }}
+                  >
+                    {variant.color_name || `V${index + 1}`}
+                  </div>
+                )}
+                {/* Price indicator */}
+                {variant.price && (
+                  <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-75 text-white text-xs p-1 text-center">
+                    ${parseFloat(variant.price).toFixed(0)}
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
-      {/* Measurements */}
-      <div>
-        <div className="">
-          <p className="">Dimensions:</p>
-          <span className="text-gray-600 text-lg font-bold">
-            {measurements}
-          </span>
+      {/* Color Selection (fallback for products without variants) */}
+      {attributes.length === 0 && colors.length > 0 && (
+        <div>
+          <div className="flex flex-col items-start justify-between mb-5">
+            <span className="text-sm font-medium">Choose Color :</span>
+            <span className="text-lg font-bold mt-2">
+              {colors[selectedColor].name}
+            </span>
+          </div>
+          <div className="flex gap-3">
+            {colors.map((color, index) => (
+              <button
+                key={index}
+                onClick={() => setSelectedColor(index)}
+                className={`w-12 h-12 rounded-lg overflow-hidden border-2 transition-all duration-200 ${
+                  selectedColor === index
+                    ? "border-black ring-2 ring-black ring-offset-2"
+                    : "border-gray-200 hover:border-gray-300"
+                }`}
+              >
+                {color.image ? (
+                  <img
+                    src={color.image}
+                    alt={color.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div
+                    className="w-full h-full flex items-center justify-center text-xs text-white font-medium"
+                    style={{
+                      backgroundColor:
+                        getColorFromName(color.name) || "#cccccc",
+                    }}
+                  >
+                    {color.name}
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
-
-      {/* Color Selection */}
-      <div>
-        <div className="flex flex-col items-start justify-between mb-5">
-          <span className="text-sm font-medium">Choose Color :</span>
-          <span className="text-lg font-bold mt-2">
-            {colors[selectedColor].name}
-          </span>
-        </div>
-        <div className="flex gap-3">
-          {colors.map((color, index) => (
-            <button
-              key={index}
-              onClick={() => setSelectedColor(index)}
-              className={`w-12 h-12 rounded-lg overflow-hidden border-2 transition-all duration-200 ${
-                selectedColor === index
-                  ? "border-black ring-2 ring-black ring-offset-2"
-                  : "border-gray-200 hover:border-gray-300"
-              }`}
-            >
-              <img
-                src={color.image}
-                alt={color.name}
-                className="w-full h-full object-cover"
-              />
-            </button>
-          ))}
-        </div>
-      </div>
+      )}
 
       {/* Quantity Selector */}
       <div>
@@ -218,6 +342,50 @@ const ProductInfo = ({ product }) => {
           <Heart className="w-5 h-5" />
         </Button>
       </div>
+
+      {/* Variant Details */}
+      {selectedVariant && (
+        <div className="pt-4 border-t border-gray-200">
+          <h3 className="text-lg font-semibold mb-3">
+            Selected Variant Details
+          </h3>
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="flex items-center">
+              <span className="text-gray-600">Color:</span>
+              <span
+                className={`inline-block ml-2 font-medium h-5 w-10 rounded-full`}
+                style={{ backgroundColor: selectedVariant.color_name }}
+              ></span>
+            </div>
+            <div>
+              <span className="text-gray-600">Dimensions:</span>
+              <span className="ml-2 font-medium">
+                {selectedVariant.size_name}
+              </span>
+            </div>
+            <div>
+              <span className="text-gray-600">Quantity:</span>
+              <span className="ml-2 font-medium">{selectedVariant.qty}</span>
+            </div>
+            <div>
+              <span className="text-gray-600">Price:</span>
+              <span className="ml-2 font-medium">
+                {formatPrice(parseFloat(selectedVariant.price))}
+              </span>
+            </div>
+            {selectedVariant.mrp &&
+              parseFloat(selectedVariant.mrp) >
+                parseFloat(selectedVariant.price) && (
+                <div>
+                  <span className="text-gray-600">MRP:</span>
+                  <span className="ml-2 font-medium line-through">
+                    {formatPrice(parseFloat(selectedVariant.mrp))}
+                  </span>
+                </div>
+              )}
+          </div>
+        </div>
+      )}
 
       {/* SKU & Category */}
       <div className="pt-4 border-t border-gray-200">

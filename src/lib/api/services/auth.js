@@ -137,6 +137,10 @@ class AuthService {
       return response.data;
     } catch (error) {
       console.error("❌ Token refresh error:", error);
+      // Clear tokens on refresh failure
+      localStorage.removeItem("token");
+      localStorage.removeItem("refresh_token");
+      localStorage.removeItem("user");
       throw error;
     }
   }

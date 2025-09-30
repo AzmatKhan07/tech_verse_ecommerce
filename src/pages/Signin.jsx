@@ -80,12 +80,6 @@ const Signin = () => {
         role: response.user?.user_type,
       };
 
-      console.log("🔐 Storing user data:", userData);
-      console.log(
-        "🔐 Token:",
-        response.tokens?.access || response.access_token
-      );
-
       const signInResult = signIn({
         token: response.tokens?.access || response.access_token,
         expiresIn: response.expires_in || 24 * 60 * 60, // 24 hours in seconds
@@ -93,23 +87,6 @@ const Signin = () => {
         authState: userData,
       });
 
-      console.log("🔐 signIn result:", signInResult);
-
-      // Check if the data was stored correctly
-      setTimeout(() => {
-        const storedAuth = localStorage.getItem("_auth");
-        console.log("🔍 Stored auth data:", storedAuth);
-        console.log("🔍 Auth data type:", typeof storedAuth);
-        console.log(
-          "🔍 Auth data starts with eyJ:",
-          storedAuth?.startsWith("eyJ")
-        );
-      }, 100);
-
-      const refreshToken = response.tokens?.refresh;
-      if (refreshToken) {
-        localStorage.setItem("refresh_token", refreshToken);
-      }
       if (formData.rememberMe) {
         localStorage.setItem("rememberMe", "true");
       } else {
