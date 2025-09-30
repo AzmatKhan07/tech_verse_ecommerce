@@ -17,12 +17,10 @@ class AuthService {
 
       console.log("📦 Login API Response:", response.data);
 
-      // Store token in localStorage
-      if (response.data?.tokens?.access) {
-        localStorage.setItem("token", response.data?.tokens?.access);
-        localStorage.setItem("refresh_token", response.data?.tokens?.refresh);
-        console.log("✅ Token stored successfully");
-      }
+      // Note: Tokens are now handled by react-auth-kit, no need to store them manually
+      console.log(
+        "✅ Login successful, tokens will be handled by react-auth-kit"
+      );
 
       return response.data;
     } catch (error) {
@@ -105,7 +103,24 @@ class AuthService {
   // Refresh token
   async refreshToken() {
     try {
-      const refreshToken = localStorage.getItem("refresh_token");
+      // Get refresh token from react-auth-kit storage
+      const authData = localStorage.getItem("_auth");
+      let refreshToken = null;
+
+      if (authData) {
+        try {
+          const parsedAuth = JSON.parse(authData);
+          refreshToken = parsedAuth.refreshToken;
+        } catch (error) {
+          console.error("Error parsing auth data for refresh:", error);
+        }
+      }
+
+      // Fallback to direct storage
+      if (!refreshToken) {
+        refreshToken = localStorage.getItem("refresh_token");
+      }
+
       if (!refreshToken) {
         throw new Error("No refresh token available");
       }
@@ -118,27 +133,7 @@ class AuthService {
 
       console.log("📦 Refresh token response:", response.data);
 
-      // Handle different response formats
-      if (response.data?.tokens?.access) {
-        localStorage.setItem("token", response.data.tokens.access);
-        if (response.data.tokens.refresh) {
-          localStorage.setItem("refresh_token", response.data.tokens.refresh);
-        }
-        console.log("✅ Tokens updated from tokens object");
-      } else if (response.data?.access) {
-        localStorage.setItem("token", response.data.access);
-        if (response.data.refresh) {
-          localStorage.setItem("refresh_token", response.data.refresh);
-        }
-        console.log("✅ Tokens updated from direct access/refresh");
-      } else if (response.data?.access_token) {
-        localStorage.setItem("token", response.data.access_token);
-        if (response.data.refresh_token) {
-          localStorage.setItem("refresh_token", response.data.refresh_token);
-        }
-        console.log("✅ Tokens updated from access_token/refresh_token");
-      }
-
+      // Return the response data - react-auth-kit will handle token storage
       return response.data;
     } catch (error) {
       console.error("❌ Token refresh error:", error);

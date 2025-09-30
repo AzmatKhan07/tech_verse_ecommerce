@@ -9,6 +9,7 @@ import ShopPagination from "@/components/shop/ShopPagination";
 import { useProducts } from "@/lib/query/hooks/useProducts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Loader2 } from "lucide-react";
+import { useCurrentUser } from "@/lib/hooks/useCurrentUser";
 
 const Shop = () => {
   const [currentPage, setCurrentPage] = useState(1);
@@ -32,6 +33,13 @@ const Shop = () => {
     colors: [],
     brands: [],
   });
+
+  const user = useCurrentUser();
+
+  console.log(
+    user,
+    "user *8********************************************************"
+  );
 
   // Build query parameters for advanced search API
   const queryParams = {

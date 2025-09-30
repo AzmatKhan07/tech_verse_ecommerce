@@ -6,7 +6,7 @@ import {
   useDeleteCartItem,
   useClearCart,
 } from "@/lib/query/hooks/useCart";
-import { useUser } from "@/context/UserContext";
+import { useAuthUser } from "react-auth-kit";
 
 // Cart action types
 const CART_ACTIONS = {
@@ -99,14 +99,15 @@ const CartContext = createContext();
 // Cart Provider Component
 export const CartProvider = ({ children }) => {
   const [state, dispatch] = useReducer(cartReducer, initialState);
-  const { user } = useUser();
+  const user = useAuthUser();
 
   // API hooks - only use when user is logged in
+  const userId = user?.id;
   const {
     data: apiCartData,
     isLoading: cartLoading,
     error: cartError,
-  } = useCartItems(user?.id);
+  } = useCartItems(userId);
   const addToCartMutation = useAddToCart();
   const updateCartItemMutation = useUpdateCartItem();
   const deleteCartItemMutation = useDeleteCartItem();
@@ -149,7 +150,7 @@ export const CartProvider = ({ children }) => {
         }
       }
     }
-  }, [user, apiCartData]);
+  }, [user?.id, apiCartData]);
 
   // Save cart to localStorage when not logged in
   useEffect(() => {

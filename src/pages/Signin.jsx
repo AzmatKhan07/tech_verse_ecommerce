@@ -3,13 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Eye, EyeOff, AlertCircle } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { useSignIn, useAuthHeader, useAuthUser } from "react-auth-kit";
+import { useSignIn, useAuthHeader } from "react-auth-kit";
+import authService from "@/lib/api/services/auth";
 
 const Signin = () => {
   const navigate = useNavigate();
   const signIn = useSignIn();
   const authHeader = useAuthHeader();
-  const user = useAuthUser();
 
   const [formData, setFormData] = useState({
     email: "",
@@ -71,43 +71,22 @@ const Signin = () => {
 
       console.log("Login successful:", response);
 
-      // Extract user data from API response
       const userData = {
         id: response.user?.id || response.id,
-        firstName:
-          response.user?.first_name || response.user?.firstName || "User",
-        lastName: response.user?.last_name || response.user?.lastName || "",
-        displayName:
-          response.user?.display_name ||
-          response.user?.displayName ||
-          `${response.user?.first_name || ""} ${
-            response.user?.last_name || ""
-          }`.trim() ||
-          response.user?.email?.split("@")[0] ||
-          "User",
-        email: response.user?.email || response.email || formData.email,
-        avatar:
-          response.user?.avatar ||
-          response.user?.profile_image ||
-          "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&auto=format",
-        role: response.user?.role || response.user?.user_type || "user",
-        isActive:
-          response.user?.is_active !== undefined
-            ? response.user.is_active
-            : true,
+        firstName: response.user?.first_name,
+        lastName: response.user?.last_name,
+        displayName: response.user?.first_name + response.user?.last_name,
+        email: response.user?.email,
+        role: response.user?.user_type,
       };
 
-      // Use react-auth-kit's signIn function
-      signIn({
+      const signInResult = signIn({
         token: response.tokens?.access || response.access_token,
         expiresIn: response.expires_in || 24 * 60 * 60, // 24 hours in seconds
         tokenType: "Bearer",
         authState: userData,
-        refreshToken: response.tokens?.refresh || response.refresh_token,
-        refreshTokenExpireIn: response.refresh_expires_in || 7 * 24 * 60 * 60, // 7 days
       });
 
-      // Store remember me preference
       if (formData.rememberMe) {
         localStorage.setItem("rememberMe", "true");
       } else {
