@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { useToast } from "@/lib/hooks/use-toast";
+import LoginRequiredModal from "@/components/common/LoginRequiredModal";
 
 /**
  * ProductCard Component
@@ -27,8 +28,9 @@ import { useToast } from "@/lib/hooks/use-toast";
 const ProductCard = ({ product, className = "" }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { addToCart, isInCart } = useCart();
+  const { addToCart, isInCart, requiresLogin } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   const {
     id,
@@ -96,6 +98,13 @@ const ProductCard = ({ product, className = "" }) => {
   const handleAddToCart = async (e) => {
     e.preventDefault();
     e.stopPropagation();
+    
+    // Check if user needs to login first
+    if (requiresLogin) {
+      setShowLoginModal(true);
+      return;
+    }
+
     try {
       // Get the first available attribute for the product
       const selectedAttribute = product.attributes?.[0] || null;
@@ -195,6 +204,12 @@ const ProductCard = ({ product, className = "" }) => {
           </div>
         </div>
       </CardContent>
+
+      {/* Login Required Modal */}
+      <LoginRequiredModal 
+        isOpen={showLoginModal} 
+        onClose={() => setShowLoginModal(false)} 
+      />
     </Card>
   );
 };

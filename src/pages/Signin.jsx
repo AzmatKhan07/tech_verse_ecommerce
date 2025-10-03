@@ -78,6 +78,7 @@ const Signin = () => {
         displayName: response.user?.first_name + response.user?.last_name,
         email: response.user?.email,
         role: response.user?.user_type,
+        mobile: response.user?.mobile,
       };
 
       const signInResult = signIn({

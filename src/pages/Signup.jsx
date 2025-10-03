@@ -4,20 +4,26 @@ import { Input } from "@/components/ui/input";
 import { Eye, EyeOff } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useSignIn } from "react-auth-kit";
+import { useToast } from "@/lib/hooks/use-toast";
+import authService from "@/lib/api/services/auth";
 
 const Signup = () => {
   const navigate = useNavigate();
   const signIn = useSignIn();
+  const { toast } = useToast();
 
   const [formData, setFormData] = useState({
-    name: "",
-    username: "",
+    firstName: "",
+    lastName: "",
     email: "",
+    phone: "",
     password: "",
+    confirmPassword: "",
     agreeToTerms: false,
   });
 
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
@@ -40,14 +46,16 @@ const Signup = () => {
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.name.trim()) {
-      newErrors.name = "Name is required";
+    if (!formData.firstName.trim()) {
+      newErrors.firstName = "First name is required";
+    } else if (formData.firstName.trim().length < 2) {
+      newErrors.firstName = "First name must be at least 2 characters";
     }
 
-    if (!formData.username.trim()) {
-      newErrors.username = "Username is required";
-    } else if (formData.username.length < 3) {
-      newErrors.username = "Username must be at least 3 characters";
+    if (!formData.lastName.trim()) {
+      newErrors.lastName = "Last name is required";
+    } else if (formData.lastName.trim().length < 2) {
+      newErrors.lastName = "Last name must be at least 2 characters";
     }
 
     if (!formData.email.trim()) {
@@ -56,10 +64,27 @@ const Signup = () => {
       newErrors.email = "Email is invalid";
     }
 
+    if (!formData.phone.trim()) {
+      newErrors.phone = "Phone number is required";
+    } else if (
+      !/^[\+]?[1-9][\d]{0,15}$/.test(formData.phone.replace(/[\s\-\(\)]/g, ""))
+    ) {
+      newErrors.phone = "Please enter a valid phone number";
+    }
+
     if (!formData.password) {
       newErrors.password = "Password is required";
-    } else if (formData.password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters";
+    } else if (formData.password.length < 8) {
+      newErrors.password = "Password must be at least 8 characters";
+    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
+      newErrors.password =
+        "Password must contain at least one uppercase letter, one lowercase letter, and one number";
+    }
+
+    if (!formData.confirmPassword) {
+      newErrors.confirmPassword = "Please confirm your password";
+    } else if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = "Passwords do not match";
     }
 
     if (!formData.agreeToTerms) {
@@ -78,27 +103,111 @@ const Signup = () => {
     setIsLoading(true);
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
       // Create user data
       const userData = {
-        firstName: formData.name.split(" ")[0] || formData.name,
-        lastName: formData.name.split(" ")[1] || "",
-        displayName: formData.name,
+        first_name: formData.firstName,
+        last_name: formData.lastName,
         email: formData.email,
-        username: formData.username,
-        avatar: null, // No avatar on signup
+        mobile: formData.phone,
+        password: formData.password,
+        confirm_password: formData.confirmPassword,
       };
 
-      // Note: In a real app, you would get the token from the signup response
-      // For now, we'll just redirect to signin
-      console.log("Signup successful, redirecting to signin");
+      // Call register API
+      const response = await authService.register(userData);
 
-      // Redirect to home page
-      navigate("/");
+      if (response) {
+        // Show success toast
+        toast({
+          title: "Signup Successful!",
+          description: "Your account has been created successfully.",
+          variant: "success",
+        });
+
+        // Automatically login the user after successful signup
+        try {
+          const loginResponse = await authService.login({
+            email: formData.email,
+            password: formData.password,
+          });
+
+          // Prepare user data for react-auth-kit
+          const userAuthData = {
+            id: loginResponse.user?.id || loginResponse.id,
+            firstName: loginResponse.user?.first_name,
+            lastName: loginResponse.user?.last_name,
+            displayName:
+              loginResponse.user?.first_name +
+              " " +
+              loginResponse.user?.last_name,
+            email: loginResponse.user?.email,
+            role: loginResponse.user?.user_type || "customer",
+            mobile: loginResponse.user?.mobile,
+          };
+
+          // Sign in with react-auth-kit
+          const signInResult = signIn({
+            token: loginResponse.tokens?.access || loginResponse.access_token,
+            expiresIn: loginResponse.expires_in || 24 * 60 * 60, // 24 hours in seconds
+            tokenType: "Bearer",
+            authState: userAuthData,
+          });
+
+          if (signInResult) {
+            // Show login success toast
+            toast({
+              title: "Welcome!",
+              description: "You have been automatically logged in.",
+              variant: "success",
+            });
+
+            // Redirect to home page with success message
+            navigate("/", {
+              state: {
+                message: "Signup successful! Welcome to our platform.",
+              },
+            });
+          } else {
+            throw new Error("Failed to authenticate after signup");
+          }
+        } catch (loginError) {
+          console.error("Auto-login error:", loginError);
+          // Even if auto-login fails, signup was successful
+          toast({
+            title: "Signup Successful!",
+            description: "Account created. Please sign in manually.",
+            variant: "success",
+          });
+          navigate("/signin");
+        }
+      }
     } catch (error) {
       console.error("Signup error:", error);
+
+      // Show error toast
+      let errorMessage = "Signup failed. Please try again.";
+
+      if (error.response) {
+        const { status, data } = error.response;
+        if (status === 400) {
+          errorMessage =
+            data?.detail || data?.message || "Invalid data provided";
+        } else if (status === 409) {
+          errorMessage = "Email already exists. Please use a different email.";
+        } else if (status === 422) {
+          errorMessage = "Please check your information and try again.";
+        } else {
+          errorMessage = `Signup failed: ${status}`;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      toast({
+        title: "Signup Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -122,12 +231,14 @@ const Signup = () => {
         <div className="w-full max-w-md space-y-8">
           {/* Header */}
           <div className="text-center">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Sign up</h1>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Create Account
+            </h1>
             <p className="text-gray-600">
-              Already have an account?{" "}
+              Join us today and start shopping! Already have an account?{" "}
               <Link
                 to="/signin"
-                className="text-green-600 hover:text-green-700 font-medium"
+                className="text-black hover:text-gray-800 font-medium underline"
               >
                 Sign in
               </Link>
@@ -136,46 +247,71 @@ const Signup = () => {
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Name Field */}
-            <div>
-              <Input
-                name="name"
-                type="text"
-                placeholder="Your name"
-                value={formData.name}
-                onChange={handleChange}
-                className={`w-full ${
-                  errors.name ? "border-red-500 focus:border-red-500" : ""
-                }`}
-              />
-              {errors.name && (
-                <p className="mt-1 text-sm text-red-600">{errors.name}</p>
-              )}
-            </div>
-
-            {/* Username Field */}
-            <div>
-              <Input
-                name="username"
-                type="text"
-                placeholder="Username"
-                value={formData.username}
-                onChange={handleChange}
-                className={`w-full ${
-                  errors.username ? "border-red-500 focus:border-red-500" : ""
-                }`}
-              />
-              {errors.username && (
-                <p className="mt-1 text-sm text-red-600">{errors.username}</p>
-              )}
+            {/* Name Fields */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label
+                  htmlFor="firstName"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  First Name *
+                </label>
+                <Input
+                  id="firstName"
+                  name="firstName"
+                  type="text"
+                  placeholder="Enter your first name"
+                  value={formData.firstName}
+                  onChange={handleChange}
+                  className={`w-full ${
+                    errors.firstName
+                      ? "border-red-500 focus:border-red-500"
+                      : ""
+                  }`}
+                />
+                {errors.firstName && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.firstName}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label
+                  htmlFor="lastName"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Last Name *
+                </label>
+                <Input
+                  id="lastName"
+                  name="lastName"
+                  type="text"
+                  placeholder="Enter your last name"
+                  value={formData.lastName}
+                  onChange={handleChange}
+                  className={`w-full ${
+                    errors.lastName ? "border-red-500 focus:border-red-500" : ""
+                  }`}
+                />
+                {errors.lastName && (
+                  <p className="mt-1 text-sm text-red-600">{errors.lastName}</p>
+                )}
+              </div>
             </div>
 
             {/* Email Field */}
             <div>
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Email Address *
+              </label>
               <Input
+                id="email"
                 name="email"
                 type="email"
-                placeholder="Email address"
+                placeholder="Enter your email address"
                 value={formData.email}
                 onChange={handleChange}
                 className={`w-full ${
@@ -187,12 +323,43 @@ const Signup = () => {
               )}
             </div>
 
+            {/* Phone Field */}
+            <div>
+              <label
+                htmlFor="phone"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Phone Number *
+              </label>
+              <Input
+                id="phone"
+                name="phone"
+                type="tel"
+                placeholder="Enter your phone number"
+                value={formData.phone}
+                onChange={handleChange}
+                className={`w-full ${
+                  errors.phone ? "border-red-500 focus:border-red-500" : ""
+                }`}
+              />
+              {errors.phone && (
+                <p className="mt-1 text-sm text-red-600">{errors.phone}</p>
+              )}
+            </div>
+
             {/* Password Field */}
             <div className="relative">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Password *
+              </label>
               <Input
+                id="password"
                 name="password"
                 type={showPassword ? "text" : "password"}
-                placeholder="Password"
+                placeholder="Create a strong password"
                 value={formData.password}
                 onChange={handleChange}
                 className={`w-full pr-10 ${
@@ -201,7 +368,7 @@ const Signup = () => {
               />
               <button
                 type="button"
-                className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                className="absolute right-3 top-9 flex items-center"
                 onClick={() => setShowPassword(!showPassword)}
               >
                 {showPassword ? (
@@ -212,6 +379,49 @@ const Signup = () => {
               </button>
               {errors.password && (
                 <p className="mt-1 text-sm text-red-600">{errors.password}</p>
+              )}
+              <p className="mt-1 text-xs text-gray-500">
+                Password must be at least 8 characters with uppercase,
+                lowercase, and number
+              </p>
+            </div>
+
+            {/* Confirm Password Field */}
+            <div className="relative">
+              <label
+                htmlFor="confirmPassword"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Confirm Password *
+              </label>
+              <Input
+                id="confirmPassword"
+                name="confirmPassword"
+                type={showConfirmPassword ? "text" : "password"}
+                placeholder="Confirm your password"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                className={`w-full pr-10 ${
+                  errors.confirmPassword
+                    ? "border-red-500 focus:border-red-500"
+                    : ""
+                }`}
+              />
+              <button
+                type="button"
+                className="absolute right-3 top-9 flex items-center"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              >
+                {showConfirmPassword ? (
+                  <EyeOff className="h-4 w-4 text-gray-400" />
+                ) : (
+                  <Eye className="h-4 w-4 text-gray-400" />
+                )}
+              </button>
+              {errors.confirmPassword && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.confirmPassword}
+                </p>
               )}
             </div>
 
@@ -224,12 +434,12 @@ const Signup = () => {
                   type="checkbox"
                   checked={formData.agreeToTerms}
                   onChange={handleChange}
-                  className="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500 focus:ring-2"
+                  className="w-4 h-4 text-black bg-gray-100 border-gray-300 rounded focus:ring-black focus:ring-2"
                 />
               </div>
               <div className="ml-3 text-sm">
                 <label htmlFor="agreeToTerms" className="text-gray-700">
-                  I agree with{" "}
+                  I agree with the{" "}
                   <Link
                     to="/privacy-policy"
                     className="text-black font-medium hover:underline"
@@ -241,7 +451,7 @@ const Signup = () => {
                     to="/terms-of-use"
                     className="text-black font-medium hover:underline"
                   >
-                    Terms of Use
+                    Terms of Service
                   </Link>
                 </label>
               </div>
@@ -254,9 +464,9 @@ const Signup = () => {
             <Button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-black text-white hover:bg-gray-800 py-3"
+              className="w-full bg-black text-white hover:bg-gray-800 py-3 text-base font-medium transition-colors duration-200"
             >
-              {isLoading ? "Signing up..." : "Sign Up"}
+              {isLoading ? "Creating Account..." : "Create Account"}
             </Button>
           </form>
         </div>
