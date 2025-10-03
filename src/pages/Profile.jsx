@@ -14,8 +14,8 @@ const Profile = () => {
     switch (activeSection) {
       case "account":
         return <AccountDetails />;
-      case "address":
-        return <AddressSection />;
+      // case "address":
+      //   return <AddressSection />;
       case "orders":
         return <OrdersSection />;
       case "wishlist":

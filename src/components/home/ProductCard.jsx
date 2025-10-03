@@ -98,7 +98,13 @@ const ProductCard = ({ product, className = "" }) => {
   const handleAddToCart = async (e) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
+    console.log("🛒 ProductCard - Adding product to cart:", {
+      productId: id,
+      product: product,
+      isInCart: isInCart(id),
+    });
+
     // Check if user needs to login first
     if (requiresLogin) {
       setShowLoginModal(true);
@@ -171,7 +177,14 @@ const ProductCard = ({ product, className = "" }) => {
               }`}
             >
               <ShoppingCartIcon className="w-4 h-4" />
-              {isInCart(id) ? "Added to cart" : "Add to cart"}
+              {(() => {
+                const inCart = isInCart(id);
+                console.log("🛒 ProductCard - Button render:", {
+                  productId: id,
+                  inCart,
+                });
+                return inCart ? "Carted" : "Add to cart";
+              })()}
             </Button>
           </div>
         </div>
@@ -206,9 +219,9 @@ const ProductCard = ({ product, className = "" }) => {
       </CardContent>
 
       {/* Login Required Modal */}
-      <LoginRequiredModal 
-        isOpen={showLoginModal} 
-        onClose={() => setShowLoginModal(false)} 
+      <LoginRequiredModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
       />
     </Card>
   );

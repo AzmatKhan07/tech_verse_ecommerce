@@ -109,6 +109,10 @@ export const CartProvider = ({ children }) => {
     isLoading: cartLoading,
     error: cartError,
   } = useCartItems(userId);
+
+  console.log("🛒 CartContext - API cart data:", apiCartData);
+  console.log("🛒 CartContext - Cart loading:", cartLoading);
+  console.log("🛒 CartContext - Cart error:", cartError);
   const addToCartMutation = useAddToCart();
   const updateCartItemMutation = useUpdateCartItem();
   const deleteCartItemMutation = useDeleteCartItem();
@@ -116,6 +120,12 @@ export const CartProvider = ({ children }) => {
 
   // Load cart from API when user is logged in, otherwise from localStorage
   useEffect(() => {
+    console.log(
+      "🛒 CartContext useEffect - User:",
+      user,
+      "API Data:",
+      apiCartData
+    );
     if (user && apiCartData !== undefined) {
       // Transform API cart data to match local cart structure
       const transformedItems = Array.isArray(apiCartData)
@@ -132,6 +142,7 @@ export const CartProvider = ({ children }) => {
           }))
         : [];
 
+      console.log("🛒 Transformed cart items:", transformedItems);
       dispatch({
         type: CART_ACTIONS.LOAD_CART,
         payload: { items: transformedItems },
@@ -273,9 +284,24 @@ export const CartProvider = ({ children }) => {
   }, 0);
 
   const isInCart = (productId) => {
-    return state.items.some((item) =>
-      user ? item.product_id === productId : item.id === productId
-    );
+    const result = state.items.some((item) => {
+      if (user) {
+        // For logged-in users, check product_id from API data
+        return item.product_id === productId;
+      } else {
+        // For guests, check the item id from local storage
+        return item.id === productId;
+      }
+    });
+
+    console.log("🛒 isInCart check:", {
+      productId,
+      items: state.items,
+      user: !!user,
+      result,
+    });
+
+    return result;
   };
 
   const getCartItemQuantity = (productId) => {

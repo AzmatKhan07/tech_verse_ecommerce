@@ -340,7 +340,7 @@ const ProductInfo = ({ product, selectedVariant, onVariantSelect }) => {
               : "bg-black text-white hover:bg-gray-800"
           }`}
         >
-          {isInCart(product.id) ? "Added to Cart" : "Add to Cart"}
+          {isInCart(product.id) ? "Carted" : "Add to Cart"}
         </Button>
         <Button
           variant="outline"

@@ -3,7 +3,7 @@ import Navbar from "@/components/common/Navbar";
 import Footer from "@/components/common/Footer";
 import CartSteps from "@/components/cart/CartSteps";
 import CartItems from "@/components/cart/CartItems";
-import CheckoutForm from "@/components/cart/CheckoutForm";
+import StripeElements from "@/components/payment/StripeElements";
 import OrderComplete from "@/components/cart/OrderComplete";
 
 const Cart = () => {
@@ -28,7 +28,7 @@ const Cart = () => {
         return <CartItems onNext={handleNextStep} />;
       case 2:
         return (
-          <CheckoutForm onNext={handleNextStep} onBack={handlePreviousStep} />
+          <StripeElements onNext={handleNextStep} onBack={handlePreviousStep} />
         );
       case 3:
         return <OrderComplete onContinueShopping={handleContinueShopping} />;

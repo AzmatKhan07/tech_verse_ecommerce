@@ -22,7 +22,7 @@ const ProfileSidebar = ({ activeSection, onSectionChange }) => {
 
   const menuItems = [
     { id: "account", label: "Account", icon: User },
-    { id: "address", label: "Address", icon: MapPin },
+    // { id: "address", label: "Address", icon: MapPin },
     { id: "orders", label: "Orders", icon: Package },
     { id: "wishlist", label: "Wishlist", icon: Heart },
     { id: "logout", label: "Log Out", icon: LogOut },

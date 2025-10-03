@@ -88,7 +88,7 @@ const ShopProductCard = ({ product, className = "" }) => {
   const handleAddToCart = async (e) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     // Check if user needs to login first
     if (requiresLogin) {
       setShowLoginModal(true);
@@ -204,7 +204,7 @@ const ShopProductCard = ({ product, className = "" }) => {
                     : "bg-black text-white hover:bg-gray-800"
                 }`}
               >
-                {isInCart(id) ? "Added to cart" : "Add to cart"}
+                {isInCart(id) ? "Carted" : "Add to cart"}
               </Button>
               <Button
                 variant="outline"
@@ -228,9 +228,9 @@ const ShopProductCard = ({ product, className = "" }) => {
       </CardContent>
 
       {/* Login Required Modal */}
-      <LoginRequiredModal 
-        isOpen={showLoginModal} 
-        onClose={() => setShowLoginModal(false)} 
+      <LoginRequiredModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
       />
     </Card>
   );
