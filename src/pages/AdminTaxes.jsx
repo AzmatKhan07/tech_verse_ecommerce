@@ -69,7 +69,7 @@ const AdminTaxes = () => {
 
   // Filter taxes based on status
   const filteredTaxes =
-    taxesData?.results?.filter((tax) => {
+    taxesData?.filter((tax) => {
       if (filterActive === "All") return true;
       if (filterActive === "Active") return tax.status;
       if (filterActive === "Inactive") return !tax.status;
@@ -77,9 +77,8 @@ const AdminTaxes = () => {
     }) || [];
 
   // Statistics
-  const totalTaxes = taxesData?.count || 0;
-  const activeTaxes =
-    taxesData?.results?.filter((tax) => tax.status).length || 0;
+  const totalTaxes = taxesData?.length || 0;
+  const activeTaxes = taxesData?.filter((tax) => tax.status).length || 0;
   const inactiveTaxes = totalTaxes - activeTaxes;
 
   const handleCreateTax = () => {
