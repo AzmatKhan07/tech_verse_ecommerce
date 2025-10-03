@@ -3,16 +3,18 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Star, Heart, Minus, Plus } from "lucide-react";
 import { useCart } from "@/context/CartContext";
+import LoginRequiredModal from "@/components/common/LoginRequiredModal";
 
 /**
  * ProductInfo Component
  * Displays product information, pricing, options, and action buttons with dynamic countdown timer
  */
 const ProductInfo = ({ product, selectedVariant, onVariantSelect }) => {
-  const { addToCart, isInCart } = useCart();
+  const { addToCart, isInCart, requiresLogin } = useCart();
   const [selectedColor, setSelectedColor] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [timeLeft, setTimeLeft] = useState(null);
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   const {
     name = "Tray Table",
@@ -138,6 +140,12 @@ const ProductInfo = ({ product, selectedVariant, onVariantSelect }) => {
   };
 
   const handleAddToCart = () => {
+    // Check if user needs to login first
+    if (requiresLogin) {
+      setShowLoginModal(true);
+      return;
+    }
+
     // Create product object with selected variant
     const productToAdd = {
       ...product,
@@ -400,6 +408,12 @@ const ProductInfo = ({ product, selectedVariant, onVariantSelect }) => {
           </div>
         </div>
       </div>
+
+      {/* Login Required Modal */}
+      <LoginRequiredModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+      />
     </div>
   );
 };

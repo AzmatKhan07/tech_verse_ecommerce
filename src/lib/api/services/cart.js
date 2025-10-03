@@ -12,7 +12,10 @@ class CartService {
   async addToCart(cartData) {
     try {
       console.log("🛒 Adding item to cart:", cartData);
-      const response = await apiClient.post(`${this.baseURL}/cart/`, cartData);
+      const response = await apiClient.post(
+        `${this.baseURL}/cart/add-item/`,
+        cartData
+      );
       console.log("✅ Item added to cart successfully:", response.status);
       return response.data;
     } catch (error) {
@@ -71,8 +74,8 @@ class CartService {
   async updateCartItem(cartItemId, cartData) {
     try {
       console.log("🛒 Updating cart item:", cartItemId, cartData);
-      const response = await apiClient.put(
-        `${this.baseURL}/cart/${cartItemId}/`,
+      const response = await apiClient.post(
+        `${this.baseURL}/cart/update-quantity/`,
         cartData
       );
       console.log("✅ Cart item updated successfully:", response.status);
@@ -101,7 +104,7 @@ class CartService {
     try {
       console.log("🛒 Deleting cart item:", cartItemId);
       const response = await apiClient.delete(
-        `${this.baseURL}/cart/${cartItemId}/`
+        `${this.baseURL}/cart/${cartItemId}/remove-item/`
       );
       console.log("✅ Cart item deleted successfully:", response.status);
       return response.data;

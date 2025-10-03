@@ -7,6 +7,7 @@ import {
   useClearCart,
 } from "@/lib/query/hooks/useCart";
 import { useAuthUser } from "react-auth-kit";
+import { useCurrentUser } from "@/lib/hooks/useCurrentUser";
 
 // Cart action types
 const CART_ACTIONS = {
@@ -99,7 +100,7 @@ const CartContext = createContext();
 // Cart Provider Component
 export const CartProvider = ({ children }) => {
   const [state, dispatch] = useReducer(cartReducer, initialState);
-  const user = useAuthUser();
+  const user = useCurrentUser();
 
   // API hooks - only use when user is logged in
   const userId = user?.id;
@@ -215,7 +216,7 @@ export const CartProvider = ({ children }) => {
       // Use API when user is logged in
       try {
         const cartItem = state.items.find(
-          (item) => item.product_id === productId
+          (item) => item.product_attr_id.id === productId
         );
         if (cartItem) {
           const cartData = {
@@ -223,7 +224,7 @@ export const CartProvider = ({ children }) => {
             user_type: "Reg",
             qty: quantity,
             product: cartItem.product_id,
-            product_attr: cartItem.product_attr_id,
+            product_attr: cartItem?.product_attr_id?.id,
           };
 
           await updateCartItemMutation.mutateAsync({
@@ -268,7 +269,7 @@ export const CartProvider = ({ children }) => {
   );
 
   const cartTotal = state.items.reduce((total, item) => {
-    return total + item.price * item.quantity;
+    return total + item?.product_attr_id?.price * item.quantity;
   }, 0);
 
   const isInCart = (productId) => {
@@ -284,6 +285,9 @@ export const CartProvider = ({ children }) => {
     return item ? item.quantity : 0;
   };
 
+  // Check if user needs to login for cart actions
+  const requiresLogin = !user;
+
   // Context value
   const contextValue = {
     // State
@@ -292,6 +296,7 @@ export const CartProvider = ({ children }) => {
     cartTotal,
     cartLoading,
     cartError,
+    requiresLogin,
 
     // Actions
     addToCart,
