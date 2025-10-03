@@ -26,6 +26,8 @@ const CartItems = ({ onNext }) => {
   const [couponCode, setCouponCode] = useState("");
   const [shippingMethod, setShippingMethod] = useState("free");
 
+  console.log(cartItems, "cartItems");
+
   const applyCoupon = () => {
     console.log("Applying coupon:", couponCode);
     // Coupon logic here
@@ -33,8 +35,8 @@ const CartItems = ({ onNext }) => {
 
   const handleUpdateQuantity = async (item, newQuantity) => {
     try {
-      const productId = item.product_id || item.id;
-      await updateQuantity(productId, newQuantity);
+      const product_attr_id = item?.product_attr_id?.id;
+      await updateQuantity(product_attr_id, newQuantity);
       toast({
         title: "Cart Updated",
         description: "Item quantity updated successfully.",
@@ -184,20 +186,22 @@ const CartItems = ({ onNext }) => {
         <div className="space-y-6 ">
           {cartItems.map((item) => (
             <div
-              key={item.id}
+              key={item?.product_attr_id?.id}
               className="grid grid-cols-4 gap-4 items-center py-4  border-b border-gray-200"
             >
               {/* Product Info */}
               <div className="flex items-center gap-4">
                 <img
-                  src={item.image}
-                  alt={item.alt || item.name}
+                  src={item?.product_attr_id?.attr_image}
+                  alt={item.name}
                   className="w-20 h-20 object-cover rounded-lg bg-gray-100"
                 />
                 <div>
                   <h3 className="font-medium text-gray-900">{item.name}</h3>
-                  {item.color && (
-                    <p className="text-sm text-gray-500">Color: {item.color}</p>
+                  {item?.product_attr_id?.color_name && (
+                    <p className="text-sm text-gray-500">
+                      Color: {item?.product_attr_id?.color_name}
+                    </p>
                   )}
                   <button
                     onClick={() => handleRemoveItem(item)}
@@ -225,6 +229,7 @@ const CartItems = ({ onNext }) => {
                     {item.quantity}
                   </span>
                   <button
+                    disabled={item?.product_attr_id?.qty <= item?.quantity}
                     onClick={() =>
                       handleUpdateQuantity(item, item.quantity + 1)
                     }
@@ -237,12 +242,12 @@ const CartItems = ({ onNext }) => {
 
               {/* Price */}
               <div className="text-center font-medium">
-                {formatPrice(item.price)}
+                {formatPrice(item?.product_attr_id?.price)}
               </div>
 
               {/* Subtotal */}
               <div className="text-center font-medium">
-                {formatPrice(item.price * item.quantity)}
+                {formatPrice(item?.product_attr_id?.price * item.quantity)}
               </div>
             </div>
           ))}

@@ -11,18 +11,20 @@ import {
 } from "@/components/ui/select";
 import { CreditCard, Plus } from "lucide-react";
 import { useCart } from "@/context/CartContext";
+import { useCurrentUser } from "@/lib/hooks/useCurrentUser";
 
 /**
  * CheckoutForm Component
  * Displays the checkout form with contact info, shipping address, and payment method
  */
 const CheckoutForm = ({ onNext, onBack }) => {
+  const user = useCurrentUser();
   const { cartItems, cartTotal } = useCart();
   const [contactInfo, setContactInfo] = useState({
-    firstName: "",
-    lastName: "",
-    phoneNumber: "",
-    emailAddress: "",
+    firstName: user?.firstName,
+    lastName: user?.lastName,
+    phoneNumber: user?.phone,
+    emailAddress: user?.email,
   });
 
   const [shippingAddress, setShippingAddress] = useState({
@@ -402,19 +404,23 @@ const CheckoutForm = ({ onNext, onBack }) => {
               cartItems.map((item) => (
                 <div key={item.id} className="flex items-center gap-3">
                   <img
-                    src={item.image}
+                    src={item?.product_attr_id?.attr_image}
                     alt={item.name}
                     className="w-16 h-16 object-cover rounded-lg bg-gray-100"
                   />
                   <div className="flex-1">
                     <h4 className="font-medium text-sm">{item.name}</h4>
-                    <p className="text-xs text-gray-500">Color: {item.color}</p>
+                    <p className="text-xs text-gray-500">
+                      Color: {item?.product_attr_id?.color_name}
+                    </p>
                     <div className="flex items-center justify-between mt-1">
                       <span className="text-xs border border-gray-300 px-2 py-1 rounded">
                         {item.quantity}
                       </span>
                       <span className="font-medium text-sm">
-                        {formatPrice(item.price)}
+                        {formatPrice(
+                          item?.product_attr_id?.price * item.quantity
+                        )}
                       </span>
                     </div>
                   </div>

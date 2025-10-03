@@ -188,6 +188,62 @@ class AuthService {
     }
     return true;
   }
+
+  // Register user
+  async register(userData) {
+    try {
+      console.log("🔗 Attempting registration with:", {
+        email: userData.email,
+      });
+
+      const response = await apiClient.post(
+        `${this.baseURL}/register/`,
+        userData
+      );
+
+      console.log("📦 Registration API Response:", response.data);
+      console.log("✅ Registration successful");
+
+      return response.data;
+    } catch (error) {
+      console.error("❌ Registration error:", error);
+
+      // Provide more detailed error information
+      if (error.response) {
+        console.error("Response status:", error.response.status);
+        console.error("Response data:", error.response.data);
+
+        // Handle specific error cases
+        if (error.response.status === 400) {
+          const errorMessage =
+            error.response.data?.detail ||
+            error.response.data?.message ||
+            "Invalid registration data";
+          throw new Error(errorMessage);
+        } else if (error.response.status === 409) {
+          throw new Error(
+            "Email already exists. Please use a different email."
+          );
+        } else if (error.response.status === 422) {
+          const errorMessage =
+            error.response.data?.detail ||
+            "Validation error. Please check your information.";
+          throw new Error(errorMessage);
+        } else {
+          throw new Error(
+            `Registration failed: ${error.response.status} - ${
+              error.response.data?.detail || "Unknown error"
+            }`
+          );
+        }
+      } else if (error.request) {
+        console.error("Request error:", error.request);
+        throw new Error("Network Error: Unable to connect to the server");
+      } else {
+        throw new Error(`Registration Error: ${error.message}`);
+      }
+    }
+  }
 }
 
 // Create and export a singleton instance
