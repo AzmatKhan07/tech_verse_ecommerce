@@ -55,6 +55,7 @@ const EditProduct = () => {
     productError,
     slug,
   });
+
   const updateProductMutation = usePatchProduct();
   const { data: brandsData, isLoading: brandsLoading } = useBrands({
     page_size: 100,
@@ -119,9 +120,9 @@ const EditProduct = () => {
   // Extract data from API responses
   const brands = brandsData?.results || [];
   const categories = categoriesData?.categories || [];
-  const taxes = taxesData?.results || [];
-  const colors = colorsData?.results || [];
-  const sizes = sizesData?.results || [];
+  const taxes = taxesData || [];
+  const colors = colorsData || [];
+  const sizes = sizesData || [];
 
   // Debug dropdown data
   console.log("🔍 Brands data:", brands);
@@ -280,14 +281,7 @@ const EditProduct = () => {
                   size: attr.size?.toString() || "",
                   color: attr.color?.toString() || "",
                 };
-                console.log(`🔍 Mapped attribute ${index}:`, mappedAttr);
-                console.log(`🔍 Original attribute ${index}:`, attr);
-                console.log(
-                  `🔍 Size value: ${attr.size} -> ${mappedAttr.size}`
-                );
-                console.log(
-                  `🔍 Color value: ${attr.color} -> ${mappedAttr.color}`
-                );
+
                 return mappedAttr;
               })
             : [
@@ -302,16 +296,9 @@ const EditProduct = () => {
                 },
               ],
       };
-
-      console.log("🔍 New form data to be set:", newFormData);
-      console.log("🔍 Brand and Category values in new form data:", {
-        brand: newFormData.brand,
-        category: newFormData.category,
-        tax: newFormData.tax,
-      });
-
       setFormData(newFormData);
 
+      console.log("🔍 Product image:", product.image);
       // Set image previews
       if (product.image) {
         setImagePreview(product.image);
@@ -331,53 +318,12 @@ const EditProduct = () => {
         setAttributeImagePreviews(attrImagePreviews);
       }
 
-      // Debug form data after setting
-      console.log("🔍 Form data set with API structure:", {
-        category: categoryValue,
-        brand: brandValue,
-        tax: taxValue,
-        attributes: formData.attributes,
-        images: product.images,
-        mainImage: product.image,
-      });
-
-      // Force a re-render by logging the current formData state
-      setTimeout(() => {
-        console.log("🔍 FormData state after setting (delayed):", formData);
-      }, 100);
-
-      // Additional debugging for dropdown options
-      console.log(
-        "🔍 Available brands for dropdown:",
-        brands.map((b) => ({ id: b.id, name: b.name }))
-      );
-      console.log(
-        "🔍 Available categories for dropdown:",
-        categories.map((c) => ({ id: c.id, name: c.category_name }))
-      );
-      console.log(
-        "🔍 Available taxes for dropdown:",
-        taxes.map((t) => ({ id: t.id, name: t.tax_desc }))
-      );
-      console.log(
-        "🔍 Available sizes for dropdown:",
-        sizes.map((s) => ({ id: s.id, name: s.size }))
-      );
-      console.log(
-        "🔍 Available colors for dropdown:",
-        colors.map((c) => ({ id: c.id, name: c.color }))
-      );
-
       // Check if the selected values exist in the dropdown options
       const selectedBrand = brands.find((b) => b.id.toString() === brandValue);
       const selectedCategory = categories.find(
         (c) => c.id.toString() === categoryValue
       );
       const selectedTax = taxes.find((t) => t.id.toString() === taxValue);
-
-      console.log("🔍 Selected brand found:", selectedBrand);
-      console.log("🔍 Selected category found:", selectedCategory);
-      console.log("🔍 Selected tax found:", selectedTax);
 
       // Check attribute size and color selections
       if (product.attributes && product.attributes.length > 0) {
@@ -403,20 +349,6 @@ const EditProduct = () => {
 
   // Debug formData state changes
   useEffect(() => {
-    console.log("🔍 FormData state changed:", formData);
-    console.log(
-      "🔍 FormData category value:",
-      formData.category,
-      typeof formData.category
-    );
-    console.log(
-      "🔍 FormData brand value:",
-      formData.brand,
-      typeof formData.brand
-    );
-    console.log("🔍 FormData tax value:", formData.tax, typeof formData.tax);
-    console.log("🔍 FormData attributes:", formData.attributes);
-
     // Check if the values match any dropdown options
     if (formData.brand) {
       const brandMatch = brands.find((b) => b.id.toString() === formData.brand);
@@ -726,30 +658,73 @@ const EditProduct = () => {
       submitData.append("is_arrival", formData.is_arrival);
       submitData.append("status", formData.status);
 
-      // Add main image - only if a new file was uploaded
+      // Handle main image - send existing or new image
       if (formData.image) {
         // New file uploaded
         submitData.append("image", formData.image);
-        console.log("🔍 Sending new image file:", formData.image.name);
+        console.log("🔍 Sending new main image file:", formData.image.name);
+      } else if (product.image) {
+        // No new file but existing image - fetch and send as file
+        try {
+          console.log("🔍 Fetching existing main image from:", product.image);
+          const response = await fetch(product.image);
+          const blob = await response.blob();
+          const fileName =
+            product.image.split("/").pop() || `main_${Date.now()}.jpg`;
+          const file = new File([blob], fileName, { type: blob.type });
+          submitData.append("image", file);
+          console.log("🔍 Sending existing main image as file:", fileName);
+        } catch (error) {
+          console.error("Error fetching existing main image:", error);
+          // Fallback: send URL directly (might work with the updated serializer)
+          console.log("🔍 Fallback: sending main image URL directly");
+          submitData.append("image", product.image);
+        }
       } else {
-        console.log("🔍 No new image uploaded, preserving existing image");
-        // If the API requires an image field, we might need to handle this differently
-        // For now, we'll try without sending the image field
+        console.log("🔍 No main image to send");
       }
 
-      // Add additional images - only new files
+      // Handle additional images - send ALL images (existing + new) to prevent backend deletion
+      const allImages = [];
+
+      // Add existing images as files (we need to fetch them as files)
+      if (product.images && product.images.length > 0) {
+        for (const existingImage of product.images) {
+          try {
+            // Fetch existing image and convert to File
+            const response = await fetch(existingImage.image || existingImage);
+            const blob = await response.blob();
+            const fileName =
+              existingImage.image?.split("/").pop() ||
+              `existing_${Date.now()}.jpg`;
+            const file = new File([blob], fileName, { type: blob.type });
+            allImages.push(file);
+          } catch (error) {
+            console.error("Error fetching existing image:", error);
+          }
+        }
+      }
+
+      // Add new images
       if (formData.images.length > 0) {
-        formData.images.forEach((image) => {
+        allImages.push(...formData.images);
+      }
+
+      // Send all images to backend
+      if (allImages.length > 0) {
+        allImages.forEach((image) => {
           submitData.append("images", image);
         });
         console.log(
-          "🔍 Sending new additional images:",
+          "🔍 Sending all images (existing + new):",
+          allImages.length,
+          "existing:",
+          product.images?.length || 0,
+          "new:",
           formData.images.length
         );
       } else {
-        console.log(
-          "🔍 No new additional images uploaded, preserving existing images"
-        );
+        console.log("🔍 No images to send");
       }
 
       // Add attributes as individual form fields (array notation)
@@ -786,20 +761,9 @@ const EditProduct = () => {
       });
 
       // Debug: Log FormData contents
-      console.log("FormData contents:");
       for (let [key, value] of submitData.entries()) {
         console.log(`${key}:`, value);
       }
-
-      // Debug: Log image handling
-      console.log("🔍 Image handling debug:");
-      console.log("formData.image:", formData.image);
-      console.log("product.image:", product.image);
-      console.log("formData.images:", formData.images);
-      console.log("product.images:", product.images);
-      console.log("🔍 Attribute images debug:");
-      console.log("formData.attributes:", formData.attributes);
-      console.log("attributeImagePreviews:", attributeImagePreviews);
 
       await updateProductMutation.mutateAsync({ slug, data: submitData });
 
@@ -870,6 +834,8 @@ const EditProduct = () => {
       </AdminLayout>
     );
   }
+
+  console.log("🔍 FormData: *****************************", formData);
 
   return (
     <AdminLayout>
