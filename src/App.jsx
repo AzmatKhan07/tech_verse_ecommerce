@@ -54,6 +54,7 @@ function App() {
             <Route path="/admin/sizes" element={<AdminSize />} />
             <Route path="/admin/taxes" element={<AdminTaxes />} />
             <Route path="/admin/home-banner" element={<AdminHomeBanner />} />
+            <Route path="/admin/order-status" element={<AdminOrderStatus />} />
 
             {/* Main app routes with navbar/footer */}
             <Route

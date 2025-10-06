@@ -28,6 +28,17 @@ const CartItems = ({ onNext }) => {
 
   console.log(cartItems, "cartItems");
 
+  // Debug cart item structure
+  cartItems.forEach((item, index) => {
+    console.log(`Item ${index}:`, {
+      name: item.name,
+      price: item?.product_attr_id?.price,
+      mrp: item?.product_attr_id?.mrp,
+      hasDiscount: item?.product_attr_id?.mrp > item?.product_attr_id?.price,
+      product_attr_id: item?.product_attr_id,
+    });
+  });
+
   const applyCoupon = () => {
     console.log("Applying coupon:", couponCode);
     // Coupon logic here
@@ -77,10 +88,23 @@ const CartItems = ({ onNext }) => {
     }).format(amount);
   };
 
-  const subtotal = cartTotal;
+  const subtotal = cartItems.reduce((total, item) => {
+    const mrp = item?.product_attr_id?.mrp;
+    return total + mrp * item.quantity;
+  }, 0);
   const shippingCost =
     shippingMethod === "free" ? 0 : shippingMethod === "express" ? 15 : 21;
-  const total = subtotal + shippingCost;
+
+  // Calculate total discount (unit discount * quantity for each item)
+  const totalDiscount = cartItems.reduce((total, item) => {
+    const price = item?.product_attr_id?.price;
+    const mrp = item?.product_attr_id?.mrp;
+    const unitDiscount = mrp - price;
+    const itemTotalDiscount = unitDiscount * item.quantity;
+    return total + itemTotalDiscount;
+  }, 0);
+
+  const total = subtotal - totalDiscount + shippingCost;
 
   // Handle loading state
   if (cartLoading) {
@@ -169,14 +193,19 @@ const CartItems = ({ onNext }) => {
       {/* Cart Items */}
       <div className="lg:col-span-2">
         {/* Cart Table Header */}
-        <div className="grid grid-cols-4 gap-4 pb-4 border-b border-gray-200 mb-6">
+        <div className="grid grid-cols-5 gap-4 pb-4 border-b border-gray-200 mb-6">
           <div className="text-sm font-medium text-gray-900">Product</div>
           <div className="text-sm font-medium text-gray-900 text-center">
             Quantity
           </div>
           <div className="text-sm font-medium text-gray-900 text-center">
-            Price
+            Unit Price
           </div>
+
+          <div className="text-sm font-medium text-gray-900 text-center">
+            Unit Discount
+          </div>
+
           <div className="text-sm font-medium text-gray-900 text-center">
             Subtotal
           </div>
@@ -187,7 +216,7 @@ const CartItems = ({ onNext }) => {
           {cartItems.map((item) => (
             <div
               key={item?.product_attr_id?.id}
-              className="grid grid-cols-4 gap-4 items-center py-4  border-b border-gray-200"
+              className="grid grid-cols-5 gap-4 items-center py-4  border-b border-gray-200"
             >
               {/* Product Info */}
               <div className="flex items-center gap-4">
@@ -241,13 +270,47 @@ const CartItems = ({ onNext }) => {
               </div>
 
               {/* Price */}
-              <div className="text-center font-medium">
-                {formatPrice(item?.product_attr_id?.price)}
+              <div className="text-center">
+                <div className="font-medium">
+                  {formatPrice(item?.product_attr_id?.mrp)}
+                </div>
+                {/* Show discount info if MRP exists and is higher than price */}
+                {(() => {
+                  const price = item?.product_attr_id?.price;
+                  const mrp = item?.product_attr_id?.mrp;
+                  const hasDiscount = mrp && mrp > price;
+
+                  console.log(`Price check for ${item.name}:`, {
+                    price,
+                    mrp,
+                    hasDiscount,
+                  });
+
+                  return hasDiscount ? (
+                    <div className="text-sm text-gray-500">
+                      <div>MRP: {formatPrice(mrp)}</div>
+                      <div className="text-red-500 font-medium">
+                        Save: {formatPrice(mrp - price)}
+                      </div>
+                    </div>
+                  ) : null;
+                })()}
+              </div>
+
+              {/* Discount */}
+              <div className="text-center">
+                <div className="font-medium">
+                  {formatPrice(
+                    item?.product_attr_id?.mrp - item?.product_attr_id?.price
+                  )}
+                </div>
               </div>
 
               {/* Subtotal */}
-              <div className="text-center font-medium">
-                {formatPrice(item?.product_attr_id?.price * item.quantity)}
+              <div className="text-center">
+                <div className="font-medium">
+                  {formatPrice(item?.product_attr_id?.price * item.quantity)}
+                </div>
               </div>
             </div>
           ))}
@@ -336,6 +399,14 @@ const CartItems = ({ onNext }) => {
                 <span>Subtotal</span>
                 <span className="font-medium">{formatPrice(subtotal)}</span>
               </div>
+
+              <div className="flex justify-between text-sm">
+                <span>Total Discount</span>
+                <span className="font-medium text-red-500">
+                  -{formatPrice(totalDiscount)}
+                </span>
+              </div>
+
               <div className="flex justify-between text-lg font-medium pt-2 border-t border-gray-200">
                 <span>Total</span>
                 <span>{formatPrice(total)}</span>

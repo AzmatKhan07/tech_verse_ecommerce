@@ -5,13 +5,14 @@ import { useCategories } from "@/lib/query/hooks/useCategories";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const CategorySection = () => {
-  // Fetch top 3 active categories from API
+  // Fetch top 3 active categories that are marked for home page
   const {
     data: categoriesData,
     isLoading,
     error,
   } = useCategories({
     is_active: true,
+    is_home: true,
     page_size: 3,
     ordering: "-created_at", // Get latest categories first
   });
@@ -19,14 +20,17 @@ const CategorySection = () => {
   // Use API categories if available, otherwise fallback to static
   const categories =
     categoriesData?.categories?.length > 0
-      ? categoriesData.categories.slice(0, 3).map((category, index) => ({
-          id: category.id,
-          name: category.category_name || category.name,
-          slug: category.category_slug || category.slug,
-          image: category.category_image || assets.Furniture1,
-          alt: `${category.category_name || category.name} Category`,
-          size: index === 0 ? "large" : "small", // First category is large
-        }))
+      ? categoriesData.categories
+          .filter((category) => category.is_home === true) // Only show categories marked for home
+          .slice(0, 3)
+          .map((category, index) => ({
+            id: category.id,
+            name: category.category_name || category.name,
+            slug: category.category_slug || category.slug,
+            image: category.category_image || assets.Furniture1,
+            alt: `${category.category_name || category.name} Category`,
+            size: index === 0 ? "large" : "small", // First category is large
+          }))
       : [
           {
             id: 1,

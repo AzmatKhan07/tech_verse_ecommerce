@@ -304,6 +304,11 @@ const AdminOrderStatus = () => {
                             <Badge className="bg-blue-100 text-blue-800">
                               {orderStatus.orders_status}
                             </Badge>
+                            {orderStatus.is_default && (
+                              <Badge className="bg-green-100 text-green-800">
+                                Default
+                              </Badge>
+                            )}
                           </div>
                           <p className="text-xs text-gray-400">
                             ID: {orderStatus.id}

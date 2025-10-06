@@ -8,6 +8,7 @@ import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { useToast } from "@/lib/hooks/use-toast";
 import LoginRequiredModal from "@/components/common/LoginRequiredModal";
+import { getDiscountBadge } from "@/lib/utils/discount";
 
 /**
  * ShopProductCard Component
@@ -33,23 +34,19 @@ const ShopProductCard = ({ product, className = "" }) => {
     short_desc,
   } = product;
 
-  // Calculate price from attributes
+  // Get price from first attribute only
   const getPrice = () => {
     if (!attributes || attributes.length === 0) return 0;
-    const prices = attributes
-      .map((attr) => parseFloat(attr.price))
-      .filter((price) => !isNaN(price) && price > 0);
-    return prices.length > 0 ? Math.min(...prices) : 0;
+    const firstAttr = attributes[0];
+    return parseFloat(firstAttr.price) || 0;
   };
 
   const getOriginalPrice = () => {
     if (!attributes || attributes.length === 0) return null;
-    const mrpPrices = attributes
-      .map((attr) => parseFloat(attr.mrp))
-      .filter((price) => !isNaN(price) && price > 0);
-    const maxMrp = mrpPrices.length > 0 ? Math.max(...mrpPrices) : null;
+    const firstAttr = attributes[0];
+    const mrp = parseFloat(firstAttr.mrp) || null;
     const currentPrice = getPrice();
-    return maxMrp && maxMrp > currentPrice ? maxMrp : null;
+    return mrp && mrp > currentPrice ? mrp : null;
   };
 
   const price = getPrice();
@@ -58,6 +55,7 @@ const ShopProductCard = ({ product, className = "" }) => {
   const isNew = is_arrival;
   const isOnSale = is_discounted || is_promo;
   const description = short_desc;
+  const discountBadge = getDiscountBadge(product, attributes, true);
 
   // Format price to currency
   const formatPrice = (amount) => {
@@ -143,12 +141,12 @@ const ShopProductCard = ({ product, className = "" }) => {
                   NEW
                 </Badge>
               )}
-              {isOnSale && (
+              {discountBadge && (
                 <Badge
-                  variant="destructive"
-                  className="bg-green-500 hover:bg-green-600 text-white text-xs font-medium px-2 py-1"
+                  variant={discountBadge.variant}
+                  className="bg-red-500 hover:bg-red-600 text-white text-xs font-medium px-2 py-1"
                 >
-                  -50%
+                  {discountBadge.text}
                 </Badge>
               )}
             </div>
@@ -181,9 +179,11 @@ const ShopProductCard = ({ product, className = "" }) => {
                 {formatPrice(price)}
               </span>
               {originalPrice && originalPrice > price && (
-                <span className="text-sm text-gray-500 line-through">
-                  {formatPrice(originalPrice)}
-                </span>
+                <div className="flex flex-col">
+                  <span className="text-sm text-gray-500 line-through">
+                    {formatPrice(originalPrice)}
+                  </span>
+                </div>
               )}
             </div>
 

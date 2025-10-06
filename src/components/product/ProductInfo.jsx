@@ -203,9 +203,11 @@ const ProductInfo = ({ product, selectedVariant, onVariantSelect }) => {
           {formatPrice(price)}
         </span>
         {originalPrice > price && (
-          <span className="text-xl text-gray-500 line-through">
-            {formatPrice(originalPrice)}
-          </span>
+          <div className="flex flex-col">
+            <span className="text-xl text-gray-500 line-through">
+              {formatPrice(originalPrice)}
+            </span>
+          </div>
         )}
       </div>
 

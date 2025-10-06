@@ -39,8 +39,8 @@ const FeaturedProductCard = ({ category, isLarge = false, className = "" }) => {
           src={category.image}
           alt={category.alt}
           className={`${
-            isLarge ? "w-[500px] object-contain" : "h-52 object-contain"
-          } group-hover:scale-110 transition-transform duration-300 ease-in-out`}
+            isLarge ? "w-[400px] h-[400px] object-cover" : "w-40 object-contain"
+          } group-hover:scale-110 transition-transform duration-300 ease-in-out rounded-full object-cover`}
           loading="lazy"
         />
       </div>
