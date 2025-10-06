@@ -2,10 +2,21 @@ import React, { useState } from "react";
 import { ChevronDown, ChevronRight, Package, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import OrderStatusBadge from "./OrderStatusBadge";
 
 const OrdersTable = ({ orders }) => {
   const [expandedOrders, setExpandedOrders] = useState(new Set());
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const formatPrice = (amount) => {
     return new Intl.NumberFormat("en-US", {
@@ -47,6 +58,23 @@ const OrdersTable = ({ orders }) => {
   // Ensure orders is an array
   const safeOrders = Array.isArray(orders) ? orders : [];
 
+  // Pagination logic
+  const totalPages = Math.ceil(safeOrders.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedOrders = safeOrders.slice(startIndex, endIndex);
+
+  // Reset to page 1 when orders change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [orders]);
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    // Collapse all expanded orders when changing pages
+    setExpandedOrders(new Set());
+  };
+
   if (!safeOrders || safeOrders.length === 0) {
     return (
       <div className="bg-gray-50 p-8 rounded-lg text-center">
@@ -78,7 +106,7 @@ const OrdersTable = ({ orders }) => {
 
       {/* Table Body */}
       <div className="divide-y divide-gray-200">
-        {safeOrders.map((order) => {
+        {paginatedOrders.map((order) => {
           const isExpanded = expandedOrders.has(order.id);
           const orderTotal = calculateOrderTotal(order.order_details || []);
           const itemCount = order.order_details?.length || 0;
@@ -217,6 +245,82 @@ const OrdersTable = ({ orders }) => {
           );
         })}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="px-6 py-4 border-t border-gray-200">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-gray-600">
+              Showing {startIndex + 1} to{" "}
+              {Math.min(endIndex, safeOrders.length)} of {safeOrders.length}{" "}
+              orders
+            </div>
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    className={
+                      currentPage === 1
+                        ? "pointer-events-none opacity-50"
+                        : "cursor-pointer"
+                    }
+                  />
+                </PaginationItem>
+
+                {/* Page numbers */}
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                  (page) => {
+                    // Show first page, last page, current page, and pages around current page
+                    const shouldShow =
+                      page === 1 ||
+                      page === totalPages ||
+                      (page >= currentPage - 1 && page <= currentPage + 1);
+
+                    if (!shouldShow) {
+                      // Show ellipsis for gaps
+                      if (
+                        page === currentPage - 2 ||
+                        page === currentPage + 2
+                      ) {
+                        return (
+                          <PaginationItem key={page}>
+                            <PaginationEllipsis />
+                          </PaginationItem>
+                        );
+                      }
+                      return null;
+                    }
+
+                    return (
+                      <PaginationItem key={page}>
+                        <PaginationLink
+                          onClick={() => handlePageChange(page)}
+                          isActive={currentPage === page}
+                          className="cursor-pointer"
+                        >
+                          {page}
+                        </PaginationLink>
+                      </PaginationItem>
+                    );
+                  }
+                )}
+
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    className={
+                      currentPage === totalPages
+                        ? "pointer-events-none opacity-50"
+                        : "cursor-pointer"
+                    }
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -3,6 +3,11 @@ import { Badge } from "@/components/ui/badge";
 
 const OrderStatusBadge = ({ status }) => {
   const getStatusStyles = (status) => {
+    // Handle undefined or null status
+    if (!status || typeof status !== "string") {
+      return "bg-gray-100 text-gray-800 hover:bg-gray-100";
+    }
+
     switch (status.toLowerCase()) {
       case "delivered":
         return "bg-green-100 text-green-800 hover:bg-green-100";
@@ -19,12 +24,15 @@ const OrderStatusBadge = ({ status }) => {
     }
   };
 
+  // Handle undefined status
+  const displayStatus = status || "Unknown";
+
   return (
     <Badge
       variant="secondary"
       className={`${getStatusStyles(status)} font-medium`}
     >
-      {status}
+      {displayStatus}
     </Badge>
   );
 };
