@@ -28,6 +28,7 @@ import AdminSize from "./pages/AdminSize";
 import AdminTaxes from "./pages/AdminTaxes";
 import AdminHomeBanner from "./pages/AdminHomeBanner";
 import AdminOrderStatus from "./pages/AdminOrderStatus";
+import Coupons from "./pages/Coupons";
 
 function App() {
   return (
@@ -53,7 +54,9 @@ function App() {
             <Route path="/admin/colors" element={<AdminColor />} />
             <Route path="/admin/sizes" element={<AdminSize />} />
             <Route path="/admin/taxes" element={<AdminTaxes />} />
+            <Route path="/admin/coupons" element={<Coupons />} />
             <Route path="/admin/home-banner" element={<AdminHomeBanner />} />
+            <Route path="/admin/order-status" element={<AdminOrderStatus />} />
 
             {/* Main app routes with navbar/footer */}
             <Route

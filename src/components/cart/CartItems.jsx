@@ -1,11 +1,11 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Minus, Plus, X, Tag, Loader2 } from "lucide-react";
+import { Minus, Plus, X, Loader2 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/lib/hooks/use-toast";
+import CouponValidator from "./CouponValidator";
 
 /**
  * CartItems Component
@@ -23,15 +23,10 @@ const CartItems = ({ onNext }) => {
     removeFromCart,
   } = useCart();
 
-  const [couponCode, setCouponCode] = useState("");
   const [shippingMethod, setShippingMethod] = useState("free");
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
 
   console.log(cartItems, "cartItems");
-
-  const applyCoupon = () => {
-    console.log("Applying coupon:", couponCode);
-    // Coupon logic here
-  };
 
   const handleUpdateQuantity = async (item, newQuantity) => {
     try {
@@ -70,17 +65,19 @@ const CartItems = ({ onNext }) => {
   };
 
   const formatPrice = (amount) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 2,
-    }).format(amount);
+    return `${amount.toLocaleString()} PKR`;
   };
 
   const subtotal = cartTotal;
   const shippingCost =
-    shippingMethod === "free" ? 0 : shippingMethod === "express" ? 15 : 21;
-  const total = subtotal + shippingCost;
+    shippingMethod === "free" ? 0 : shippingMethod === "express" ? 500 : 300;
+  const discount = appliedCoupon ? appliedCoupon.discount : 0;
+  const total = subtotal - discount + shippingCost;
+
+  // Handle coupon application from CouponValidator
+  const handleCouponApplied = (couponData) => {
+    setAppliedCoupon(couponData);
+  };
 
   // Handle loading state
   if (cartLoading) {
@@ -252,28 +249,6 @@ const CartItems = ({ onNext }) => {
             </div>
           ))}
         </div>
-
-        {/* Coupon Section */}
-        <div className="mt-4 pt-8 ">
-          <h3 className="text-lg font-medium mb-2">Have a coupon?</h3>
-          <p className="text-gray-600 text-sm mb-4">
-            Add your code for an instant cart discount
-          </p>
-          <div className="flex gap-3">
-            <div className="flex-1 relative">
-              <Tag className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                placeholder="Coupon Code"
-                value={couponCode}
-                onChange={(e) => setCouponCode(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <Button onClick={applyCoupon} variant="outline">
-              Apply
-            </Button>
-          </div>
-        </div>
       </div>
 
       {/* Cart Summary */}
@@ -296,7 +271,7 @@ const CartItems = ({ onNext }) => {
                   />
                   <span className="text-sm">Free shipping</span>
                 </div>
-                <span className="text-sm font-medium">$0.00</span>
+                <span className="text-sm font-medium">0 PKR</span>
               </label>
 
               <label className="flex items-center justify-between cursor-pointer">
@@ -311,7 +286,7 @@ const CartItems = ({ onNext }) => {
                   />
                   <span className="text-sm">Express shipping</span>
                 </div>
-                <span className="text-sm font-medium">+$15.00</span>
+                <span className="text-sm font-medium">+500 PKR</span>
               </label>
 
               <label className="flex items-center justify-between cursor-pointer">
@@ -326,8 +301,17 @@ const CartItems = ({ onNext }) => {
                   />
                   <span className="text-sm">Pick Up</span>
                 </div>
-                <span className="text-sm font-medium">%21.00</span>
+                <span className="text-sm font-medium">+300 PKR</span>
               </label>
+            </div>
+
+            {/* Coupon Validator */}
+            <div className="mb-6">
+              <CouponValidator
+                orderAmount={subtotal}
+                onCouponApplied={handleCouponApplied}
+                appliedCoupon={appliedCoupon}
+              />
             </div>
 
             {/* Summary */}
@@ -336,6 +320,25 @@ const CartItems = ({ onNext }) => {
                 <span>Subtotal</span>
                 <span className="font-medium">{formatPrice(subtotal)}</span>
               </div>
+
+              {/* Applied Coupon */}
+              {appliedCoupon && (
+                <div className="flex justify-between text-sm">
+                  <span>{appliedCoupon.code}</span>
+                  <span className="text-green-600">
+                    -{formatPrice(appliedCoupon.discount)}
+                  </span>
+                </div>
+              )}
+
+              {/* Shipping */}
+              <div className="flex justify-between text-sm">
+                <span>Shipping</span>
+                <span>
+                  {shippingCost === 0 ? "Free" : formatPrice(shippingCost)}
+                </span>
+              </div>
+
               <div className="flex justify-between text-lg font-medium pt-2 border-t border-gray-200">
                 <span>Total</span>
                 <span>{formatPrice(total)}</span>
