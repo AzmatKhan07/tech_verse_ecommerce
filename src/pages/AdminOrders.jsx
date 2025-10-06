@@ -1,8 +1,17 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import {
   Select,
   SelectContent,
@@ -62,6 +71,13 @@ const AdminOrders = () => {
     refetch,
   } = useAdminOrders(queryParams);
 
+  // Reset to page 1 if we get a 404 error (invalid page)
+  useEffect(() => {
+    if (error && error.message.includes("404") && currentPage > 1) {
+      setCurrentPage(1);
+    }
+  }, [error, currentPage]);
+
   // Fetch order statuses for dropdown options
   const { data: orderStatusesData, isLoading: orderStatusesLoading } =
     useOrderStatuses({
@@ -72,15 +88,11 @@ const AdminOrders = () => {
   // Update order status mutation
   const updateOrderStatusMutation = useUpdateOrderStatus();
 
-  // Extract data from response
+  // Extract data from response (DRF style pagination)
   const orders = ordersData?.results || [];
-  const pagination = ordersData?.pagination || {
-    count: 0,
-    totalPages: 1,
-    currentPage: 1,
-    hasNext: false,
-    hasPrevious: false,
-  };
+  const count = ordersData?.count || 0;
+  const pageSize = queryParams.page_size;
+  const totalPages = Math.max(1, Math.ceil(count / pageSize));
 
   const formatPrice = (amount) => {
     return new Intl.NumberFormat("en-US", {
@@ -301,7 +313,7 @@ const AdminOrders = () => {
                     {isLoading ? (
                       <Loader2 className="w-5 h-5 animate-spin" />
                     ) : (
-                      pagination.count || 0
+                      count
                     )}
                   </p>
                 </div>
@@ -494,38 +506,74 @@ const AdminOrders = () => {
         </Card>
 
         {/* Pagination */}
-        {pagination.totalPages > 1 && (
+        {totalPages > 1 && (
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div className="text-sm text-gray-600">
-                  Showing {(currentPage - 1) * 20 + 1} to{" "}
-                  {Math.min(currentPage * 20, pagination.count)} of{" "}
-                  {pagination.count} orders
+                  Showing {(currentPage - 1) * pageSize + 1} to{" "}
+                  {Math.min(currentPage * pageSize, count)} of {count} orders
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(currentPage - 1)}
-                    disabled={currentPage === 1 || isLoading}
-                  >
-                    Previous
-                  </Button>
-                  <span className="text-sm text-gray-600">
-                    Page {currentPage} of {pagination.totalPages}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(currentPage + 1)}
-                    disabled={
-                      currentPage === pagination.totalPages || isLoading
-                    }
-                  >
-                    Next
-                  </Button>
-                </div>
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        onClick={() => setCurrentPage(currentPage - 1)}
+                        className={
+                          currentPage === 1 || isLoading
+                            ? "pointer-events-none opacity-50"
+                            : "cursor-pointer"
+                        }
+                      />
+                    </PaginationItem>
+
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                      (page) => {
+                        const shouldShow =
+                          page === 1 ||
+                          page === totalPages ||
+                          (page >= currentPage - 1 && page <= currentPage + 1);
+
+                        if (!shouldShow) {
+                          if (
+                            page === currentPage - 2 ||
+                            page === currentPage + 2
+                          ) {
+                            return (
+                              <PaginationItem key={page}>
+                                <PaginationEllipsis />
+                              </PaginationItem>
+                            );
+                          }
+                          return null;
+                        }
+
+                        return (
+                          <PaginationItem key={page}>
+                            <PaginationLink
+                              onClick={() => setCurrentPage(page)}
+                              isActive={currentPage === page}
+                              className="cursor-pointer"
+                            >
+                              {page}
+                            </PaginationLink>
+                          </PaginationItem>
+                        );
+                      }
+                    )}
+
+                    <PaginationItem>
+                      <PaginationNext
+                        onClick={() => setCurrentPage(currentPage + 1)}
+                        className={
+                          currentPage === totalPages || isLoading
+                            ? "pointer-events-none opacity-50"
+                            : "cursor-pointer"
+                        }
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
               </div>
             </CardContent>
           </Card>
