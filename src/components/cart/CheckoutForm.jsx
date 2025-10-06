@@ -106,11 +106,12 @@ const CheckoutForm = ({ onNext, onBack }) => {
 
       if (paymentMethod === "credit-card") {
         // Create payment intent
-        const { client_secret } = await paymentService.createPaymentIntent({
-          amount: Math.round(total * 100), // Convert to cents
-          currency: "pkr",
-          order_data: orderData,
-        });
+        const { client_secret, order_id } =
+          await paymentService.createPaymentIntent({
+            amount: Math.round(total * 100), // Convert to cents
+            currency: "pkr",
+            order_data: orderData,
+          });
 
         // Confirm payment with Stripe
         const cardElement = elements.getElement(CardElement);
@@ -158,7 +159,28 @@ const CheckoutForm = ({ onNext, onBack }) => {
             variant: "success",
           });
 
-          onNext();
+          // Prepare order data for OrderComplete component
+          const completeOrderData = {
+            orderNumber: `#${order_id}`,
+            date: new Date().toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            }),
+            total: total,
+            paymentMethod:
+              paymentMethod === "credit-card" ? "Credit Card" : "PayPal",
+            items: cartItems.map((item) => ({
+              id: item.id,
+              name: item.name,
+              quantity: item.quantity,
+              image: item.product_attr_id?.attr_image,
+              product_attr_id: item.product_attr_id,
+              product_name: item.name,
+            })),
+          };
+
+          onNext(completeOrderData);
         }
       } else if (paymentMethod === "paypal") {
         // Handle PayPal payment

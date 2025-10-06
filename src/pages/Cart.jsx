@@ -8,8 +8,12 @@ import OrderComplete from "@/components/cart/OrderComplete";
 
 const Cart = () => {
   const [currentStep, setCurrentStep] = useState(1);
+  const [orderData, setOrderData] = useState(null);
 
-  const handleNextStep = () => {
+  const handleNextStep = (data = null) => {
+    if (data) {
+      setOrderData(data);
+    }
     setCurrentStep((prev) => Math.min(prev + 1, 3));
   };
 
@@ -31,7 +35,12 @@ const Cart = () => {
           <StripeElements onNext={handleNextStep} onBack={handlePreviousStep} />
         );
       case 3:
-        return <OrderComplete onContinueShopping={handleContinueShopping} />;
+        return (
+          <OrderComplete
+            onContinueShopping={handleContinueShopping}
+            orderData={orderData}
+          />
+        );
       default:
         return <CartItems onNext={handleNextStep} />;
     }
