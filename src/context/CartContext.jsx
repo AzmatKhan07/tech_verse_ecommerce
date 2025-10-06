@@ -283,6 +283,17 @@ export const CartProvider = ({ children }) => {
     return total + item?.product_attr_id?.price * item.quantity;
   }, 0);
 
+  const mrpTotal = state.items.reduce((total, item) => {
+    return total + item?.product_attr_id?.mrp * item.quantity;
+  }, 0);
+  const discount = state.items.reduce((total, item) => {
+    const price = item?.product_attr_id?.price;
+    const mrp = item?.product_attr_id?.mrp;
+    const unitDiscount = mrp - price;
+    const itemTotalDiscount = unitDiscount * item.quantity;
+    return total + itemTotalDiscount;
+  }, 0);
+
   const isInCart = (productId) => {
     const result = state.items.some((item) => {
       if (user) {
@@ -323,7 +334,8 @@ export const CartProvider = ({ children }) => {
     cartLoading,
     cartError,
     requiresLogin,
-
+    mrpTotal,
+    discount,
     // Actions
     addToCart,
     removeFromCart,

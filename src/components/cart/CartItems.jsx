@@ -21,12 +21,11 @@ const CartItems = ({ onNext }) => {
     cartError,
     updateQuantity,
     removeFromCart,
+    discount: totalDiscount,
   } = useCart();
 
   const [shippingMethod, setShippingMethod] = useState("free");
   const [appliedCoupon, setAppliedCoupon] = useState(null);
-
-  console.log(cartItems, "cartItems");
 
   const handleUpdateQuantity = async (item, newQuantity) => {
     try {
@@ -65,7 +64,7 @@ const CartItems = ({ onNext }) => {
   };
 
   const formatPrice = (amount) => {
-    return `${amount.toLocaleString()} PKR`;
+    return `${amount?.toLocaleString()} PKR`;
   };
 
   const subtotal = cartItems.reduce((total, item) => {
@@ -75,19 +74,7 @@ const CartItems = ({ onNext }) => {
   const shippingCost =
     shippingMethod === "free" ? 0 : shippingMethod === "express" ? 15 : 21;
 
-  // Calculate total discount (unit discount * quantity for each item)
-  const totalDiscount = cartItems.reduce((total, item) => {
-    const price = item?.product_attr_id?.price;
-    const mrp = item?.product_attr_id?.mrp;
-    const unitDiscount = mrp - price;
-    const itemTotalDiscount = unitDiscount * item.quantity;
-    return total + itemTotalDiscount;
-  }, 0);
-
   const total = subtotal - totalDiscount + shippingCost;
-  shippingMethod === "free" ? 0 : shippingMethod === "express" ? 500 : 300;
-  const discount = appliedCoupon ? appliedCoupon.discount : 0;
-  const total = subtotal - discount + shippingCost;
 
   // Handle coupon application from CouponValidator
   const handleCouponApplied = (couponData) => {
@@ -359,14 +346,14 @@ const CartItems = ({ onNext }) => {
               </label>
             </div>
 
-            {/* Coupon Validator */}
+            {/* Coupon Validator
             <div className="mb-6">
               <CouponValidator
                 orderAmount={subtotal}
                 onCouponApplied={handleCouponApplied}
                 appliedCoupon={appliedCoupon}
               />
-            </div>
+            </div> */}
 
             {/* Summary */}
             <div className="space-y-2 pt-4 border-t border-gray-200">
@@ -390,6 +377,12 @@ const CartItems = ({ onNext }) => {
                 <span>Shipping</span>
                 <span>
                   {shippingCost === 0 ? "Free" : formatPrice(shippingCost)}
+                </span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span>Total Discount</span>
+                <span className="font-medium">
+                  {formatPrice(totalDiscount)}
                 </span>
               </div>
 

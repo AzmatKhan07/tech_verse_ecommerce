@@ -23,7 +23,7 @@ import CouponValidator from "./CouponValidator";
  */
 const CheckoutForm = ({ onNext, onBack }) => {
   const user = useCurrentUser();
-  const { cartItems, cartTotal } = useCart();
+  const { cartItems, cartTotal, mrpTotal, discount } = useCart();
   const stripe = useStripe();
   const elements = useElements();
   const { toast } = useToast();
@@ -50,19 +50,20 @@ const CheckoutForm = ({ onNext, onBack }) => {
   const [shippingMethod, setShippingMethod] = useState("free");
 
   const formatPrice = (amount) => {
-    return `${amount.toLocaleString()} PKR`;
+    return `${amount?.toLocaleString()} PKR`;
   };
 
   // Calculate discount from applied coupon
-  const discount = appliedCoupon ? appliedCoupon.discount : 0;
+  const totalDiscount = appliedCoupon ? appliedCoupon.discount : null;
 
   // Calculate shipping cost
   const shippingCost =
     shippingMethod === "free" ? 0 : shippingMethod === "express" ? 500 : 300;
 
   // Calculate totals using cart context
+
   const subtotal = cartTotal;
-  const total = subtotal - discount + shippingCost;
+  const total = subtotal - totalDiscount + shippingCost;
 
   // Handle coupon application from CouponValidator
   const handleCouponApplied = (couponData) => {
@@ -519,6 +520,14 @@ const CheckoutForm = ({ onNext, onBack }) => {
                 <span>Subtotal</span>
                 <span className="font-medium">{formatPrice(subtotal)}</span>
               </div>
+              {totalDiscount && (
+                <div className="flex justify-between text-sm">
+                  <span>Discount</span>
+                  <span className="font-medium">
+                    {formatPrice(totalDiscount)}
+                  </span>
+                </div>
+              )}
 
               {/* Total */}
               <div className="flex justify-between text-lg font-medium pt-2 border-t border-gray-200">
