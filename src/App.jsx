@@ -28,7 +28,7 @@ import AdminSize from "./pages/AdminSize";
 import AdminTaxes from "./pages/AdminTaxes";
 import AdminHomeBanner from "./pages/AdminHomeBanner";
 import AdminOrderStatus from "./pages/AdminOrderStatus";
-import Coupons from "./pages/Coupons";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 function App() {
   return (
@@ -42,21 +42,111 @@ function App() {
             <Route path="/signup" element={<Signup />} />
             <Route path="/signin" element={<Signin />} />
 
-            {/* Admin routes without navbar/footer */}
-            <Route path="/admin/dashboard" element={<Dashboard />} />
-            <Route path="/admin/products" element={<AdminProducts />} />
-            <Route path="/admin/categories" element={<AdminCategory />} />
-            <Route path="/admin/add-product" element={<AddProduct />} />
-            <Route path="/admin/edit-product/:slug" element={<EditProduct />} />
-            <Route path="/admin/orders" element={<AdminOrders />} />
-            <Route path="/admin/orders/:orderId" element={<OrderDetails />} />
-            <Route path="/admin/brands" element={<Brand />} />
-            <Route path="/admin/colors" element={<AdminColor />} />
-            <Route path="/admin/sizes" element={<AdminSize />} />
-            <Route path="/admin/taxes" element={<AdminTaxes />} />
-            <Route path="/admin/coupons" element={<Coupons />} />
-            <Route path="/admin/home-banner" element={<AdminHomeBanner />} />
-            <Route path="/admin/order-status" element={<AdminOrderStatus />} />
+            {/* Admin routes without navbar/footer - Protected for admin users only */}
+            <Route
+              path="/admin/dashboard"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "super_admin"]}>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/products"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "super_admin"]}>
+                  <AdminProducts />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/categories"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "super_admin"]}>
+                  <AdminCategory />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/add-product"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "super_admin"]}>
+                  <AddProduct />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/edit-product/:slug"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "super_admin"]}>
+                  <EditProduct />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/orders"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "super_admin"]}>
+                  <AdminOrders />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/orders/:orderId"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "super_admin"]}>
+                  <OrderDetails />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/brands"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "super_admin"]}>
+                  <Brand />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/colors"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "super_admin"]}>
+                  <AdminColor />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/sizes"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "super_admin"]}>
+                  <AdminSize />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/taxes"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "super_admin"]}>
+                  <AdminTaxes />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/home-banner"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "super_admin"]}>
+                  <AdminHomeBanner />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/order-status"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "super_admin"]}>
+                  <AdminOrderStatus />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Main app routes with navbar/footer */}
             <Route
@@ -69,7 +159,14 @@ function App() {
                     <Route path="/shop" element={<Shop />} />
                     <Route path="/cart" element={<Cart />} />
                     <Route path="/contact" element={<Contact />} />
-                    <Route path="/profile" element={<Profile />} />
+                    <Route
+                      path="/profile"
+                      element={
+                        <ProtectedRoute>
+                          <Profile />
+                        </ProtectedRoute>
+                      }
+                    />
                     <Route
                       path="/product-details/:slug"
                       element={<ProductDetails />}
