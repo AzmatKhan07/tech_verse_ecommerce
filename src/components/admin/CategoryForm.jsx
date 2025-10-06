@@ -155,7 +155,15 @@ export const CategoryForm = ({ category, onSubmit, onCancel, isLoading }) => {
     e.preventDefault();
 
     if (validateForm()) {
-      onSubmit(formData);
+      // Prepare submission data
+      const submissionData = { ...formData };
+
+      // If editing and no new image selected, preserve current image
+      if (category && !formData.image && currentImageUrl) {
+        submissionData.image = currentImageUrl;
+      }
+
+      onSubmit(submissionData);
     }
   };
 

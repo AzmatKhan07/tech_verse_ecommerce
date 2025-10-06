@@ -98,8 +98,27 @@ const ProductDetails = () => {
   function getProductBadges(product) {
     const badges = [];
     if (product.is_arrival) badges.push({ text: "NEW", variant: "default" });
-    if (product.is_discounted || product.is_promo)
-      badges.push({ text: "-50%", variant: "destructive" });
+
+    // Calculate discount percentage
+    if (product.is_discounted || product.is_promo) {
+      const currentPrice = selectedVariant
+        ? parseFloat(selectedVariant.price) || 0
+        : getMinPrice(product.attributes);
+      const originalPrice = selectedVariant
+        ? parseFloat(selectedVariant.mrp) || null
+        : getMaxMrp(product.attributes);
+
+      if (originalPrice && originalPrice > currentPrice) {
+        const discountPercentage = Math.round(
+          ((originalPrice - currentPrice) / originalPrice) * 100
+        );
+        badges.push({
+          text: `-${discountPercentage}%`,
+          variant: "destructive",
+        });
+      }
+    }
+
     return badges;
   }
 

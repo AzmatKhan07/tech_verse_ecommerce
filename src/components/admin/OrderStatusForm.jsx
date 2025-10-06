@@ -3,11 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Save, Loader2 } from "lucide-react";
 
 const OrderStatusForm = ({ orderStatus, onSubmit, onCancel, isLoading }) => {
   const [formData, setFormData] = useState({
     orders_status: "",
+    is_default: false,
   });
 
   const [errors, setErrors] = useState({});
@@ -17,11 +19,13 @@ const OrderStatusForm = ({ orderStatus, onSubmit, onCancel, isLoading }) => {
     if (orderStatus) {
       setFormData({
         orders_status: orderStatus.orders_status || "",
+        is_default: orderStatus.is_default || false,
       });
     } else {
       // Reset form for new order status
       setFormData({
         orders_status: "",
+        is_default: false,
       });
     }
     setErrors({});
@@ -65,6 +69,7 @@ const OrderStatusForm = ({ orderStatus, onSubmit, onCancel, isLoading }) => {
     // Prepare data for submission
     const submitData = {
       orders_status: formData.orders_status.trim(),
+      is_default: formData.is_default,
     };
 
     onSubmit(submitData);
@@ -101,6 +106,26 @@ const OrderStatusForm = ({ orderStatus, onSubmit, onCancel, isLoading }) => {
             </p>
           </div>
 
+          {/* Is Default Checkbox */}
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="is_default"
+                checked={formData.is_default}
+                onCheckedChange={(checked) =>
+                  handleInputChange("is_default", checked)
+                }
+              />
+              <Label htmlFor="is_default" className="text-sm font-medium">
+                Set as default order status
+              </Label>
+            </div>
+            <p className="text-sm text-gray-500">
+              When checked, this status will be used as the default for new
+              orders
+            </p>
+          </div>
+
           {/* Preview */}
           {formData.orders_status && (
             <div className="p-4 bg-gray-50 rounded-lg">
@@ -112,6 +137,11 @@ const OrderStatusForm = ({ orderStatus, onSubmit, onCancel, isLoading }) => {
                 <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm font-medium">
                   {formData.orders_status}
                 </span>
+                {formData.is_default && (
+                  <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-sm font-medium">
+                    Default
+                  </span>
+                )}
               </div>
             </div>
           )}
