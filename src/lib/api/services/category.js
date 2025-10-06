@@ -181,7 +181,7 @@ class CategoryService {
         }
 
         console.log("🔗 Updating category with file upload:", {
-          id,
+          slug,
           category_name: categoryData.name,
           category_slug: categoryData.slug,
           hasImage: !!categoryData.image,
@@ -220,12 +220,19 @@ class CategoryService {
             }),
         };
 
-        // Only include category_image if it's a string (existing image URL)
-        if (categoryData.image && typeof categoryData.image === "string") {
-          apiData.category_image = categoryData.image;
-        } else if (categoryData.image === null) {
+        // Handle category_image
+        if (categoryData.image === null) {
           // Explicitly set to null to remove existing image
           apiData.category_image = null;
+        } else if (
+          categoryData.image &&
+          typeof categoryData.image === "string"
+        ) {
+          // Existing image URL - don't send it to backend, let backend preserve it
+          // The backend will keep the current image if no new file is provided
+        } else if (categoryData.image === undefined) {
+          // No image provided - preserve existing image by not including the field
+          // This means the backend will keep the current image
         }
 
         console.log("🔗 Updating category with data:", apiData);
