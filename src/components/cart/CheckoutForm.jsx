@@ -124,7 +124,7 @@ const CheckoutForm = ({ onNext, onBack }) => {
         // Create payment intent
         const { client_secret } = await paymentService.createPaymentIntent({
           amount: Math.round(total * 100), // Convert to cents
-          currency: "usd",
+          currency: "pkr",
           order_data: orderData,
         });
 
@@ -161,12 +161,12 @@ const CheckoutForm = ({ onNext, onBack }) => {
         }
 
         if (paymentIntent.status === "succeeded") {
-          // Create order in backend
-          await paymentService.createOrder({
-            ...orderData,
-            payment_intent_id: paymentIntent.id,
-            payment_status: "completed",
-          });
+          // // Create order in backend
+          // await paymentService.createOrder({
+          //   ...orderData,
+          //   payment_intent_id: paymentIntent.id,
+          //   payment_status: "completed",
+          // });
 
           toast({
             title: "Payment Successful",

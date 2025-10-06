@@ -68,7 +68,7 @@ const AdminSize = () => {
 
   // Filter sizes based on status
   const filteredSizes =
-    sizesData?.results?.filter((size) => {
+    sizesData?.filter((size) => {
       if (filterActive === "All") return true;
       if (filterActive === "Active") return size.status;
       if (filterActive === "Inactive") return !size.status;
@@ -76,9 +76,8 @@ const AdminSize = () => {
     }) || [];
 
   // Statistics
-  const totalSizes = sizesData?.count || 0;
-  const activeSizes =
-    sizesData?.results?.filter((size) => size.status).length || 0;
+  const totalSizes = sizesData?.length || 0;
+  const activeSizes = sizesData?.filter((size) => size.status).length || 0;
   const inactiveSizes = totalSizes - activeSizes;
 
   const handleCreateSize = () => {

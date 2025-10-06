@@ -71,7 +71,7 @@ const AdminColor = () => {
 
   // Filter colors based on status
   const filteredColors =
-    colorsData?.results?.filter((color) => {
+    colorsData?.filter((color) => {
       if (filterActive === "All") return true;
       if (filterActive === "Active") return color.status;
       if (filterActive === "Inactive") return !color.status;
@@ -79,9 +79,8 @@ const AdminColor = () => {
     }) || [];
 
   // Statistics
-  const totalColors = colorsData?.count || 0;
-  const activeColors =
-    colorsData?.results?.filter((color) => color.status).length || 0;
+  const totalColors = colorsData?.length || 0;
+  const activeColors = colorsData?.filter((color) => color.status).length || 0;
   const inactiveColors = totalColors - activeColors;
 
   const handleCreateColor = () => {

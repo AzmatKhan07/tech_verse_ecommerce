@@ -110,11 +110,11 @@ const AddProduct = () => {
   }, [formData]);
 
   // Extract data from API responses
-  const brands = brandsData?.results || [];
+  const brands = brandsData || [];
   const categories = categoriesData?.categories || [];
-  const taxes = taxesData?.results || [];
-  const colors = colorsData?.results || [];
-  const sizes = sizesData?.results || [];
+  const taxes = taxesData || [];
+  const colors = colorsData || [];
+  const sizes = sizesData || [];
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;

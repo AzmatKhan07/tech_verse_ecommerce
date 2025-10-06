@@ -40,8 +40,6 @@ const EditProduct = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  console.log("🔍 EditProduct - slug from URL:", slug);
-
   // API hooks
   const {
     data: product,
@@ -49,32 +47,20 @@ const EditProduct = () => {
     error: productError,
   } = useProduct(slug);
 
-  console.log("🔍 useProduct hook result:", {
-    product,
-    productLoading,
-    productError,
-    slug,
-  });
-
   const updateProductMutation = usePatchProduct();
   const { data: brandsData, isLoading: brandsLoading } = useBrands({
-    page_size: 100,
     status: true,
   });
   const { data: categoriesData, isLoading: categoriesLoading } = useCategories({
-    page_size: 100,
     is_active: true,
   });
   const { data: taxesData, isLoading: taxesLoading } = useTaxes({
-    page_size: 100,
     status: true,
   });
   const { data: colorsData, isLoading: colorsLoading } = useColors({
-    page_size: 100,
     status: true,
   });
   const { data: sizesData, isLoading: sizesLoading } = useSizes({
-    page_size: 100,
     status: true,
   });
 
@@ -118,28 +104,19 @@ const EditProduct = () => {
   const [attributeImagePreviews, setAttributeImagePreviews] = useState({});
 
   // Extract data from API responses
-  const brands = brandsData?.results || [];
+  const brands = brandsData || [];
   const categories = categoriesData?.categories || [];
   const taxes = taxesData || [];
   const colors = colorsData || [];
   const sizes = sizesData || [];
 
-  // Debug dropdown data
-  console.log("🔍 Brands data:", brands);
-  console.log("🔍 Categories data:", categories);
-  console.log("🔍 Taxes data:", taxes);
-  console.log("🔍 Colors data:", colors);
-  console.log("🔍 Sizes data:", sizes);
-
   // Load product data when it's available
   useEffect(() => {
-    console.log("🔍 useEffect triggered with:", {
-      hasProduct: !!product,
-      brandsLength: brands.length,
-      categoriesLength: categories.length,
-      sizesLength: sizes.length,
-      colorsLength: colors.length,
-    });
+    console.log("🔍 product", product);
+    console.log("🔍 brands", brands);
+    console.log("🔍 categories", categories);
+    console.log("🔍 sizes", sizes);
+    console.log("🔍 colors", colors);
 
     if (
       product &&
@@ -148,35 +125,6 @@ const EditProduct = () => {
       sizes.length > 0 &&
       colors.length > 0
     ) {
-      console.log("🔍 All data available, setting form data");
-      console.log("🔍 Product data received:", product);
-      console.log(
-        "🔍 Product category:",
-        product.category,
-        typeof product.category
-      );
-      console.log("🔍 Product brand:", product.brand, typeof product.brand);
-      console.log(
-        "🔍 Product category structure:",
-        JSON.stringify(product.category, null, 2)
-      );
-      console.log(
-        "🔍 Product brand structure:",
-        JSON.stringify(product.brand, null, 2)
-      );
-      console.log("🔍 Product attributes:", product.attributes);
-      console.log("🔍 Product images:", product.images);
-      console.log("🔍 Product tax:", product.tax);
-      console.log("🔍 Product status:", product.status);
-      console.log("🔍 Product flags:", {
-        is_promo: product.is_promo,
-        is_featured: product.is_featured,
-        is_discounted: product.is_discounted,
-        is_tranding: product.is_tranding,
-        is_arrival: product.is_arrival,
-      });
-
-      // Map data according to the exact API structure
       // Handle different possible data formats
       let categoryValue = "";
       let brandValue = "";
@@ -209,44 +157,10 @@ const EditProduct = () => {
         }
       }
 
-      console.log("🔍 Mapped values from API structure:", {
-        categoryValue,
-        brandValue,
-        taxValue,
-        originalCategory: product.category,
-        originalBrand: product.brand,
-        originalTax: product.tax,
-      });
-
-      // Debug brand and category matching
-      console.log(
-        "🔍 Available brands:",
-        brands.map((b) => ({ id: b.id, name: b.name, idType: typeof b.id }))
-      );
-      console.log(
-        "🔍 Available categories:",
-        categories.map((c) => ({
-          id: c.id,
-          name: c.category_name,
-          idType: typeof c.id,
-        }))
-      );
-
       const foundBrand = brands.find((b) => b.id.toString() === brandValue);
       const foundCategory = categories.find(
         (c) => c.id.toString() === categoryValue
       );
-
-      console.log("🔍 Brand lookup:", {
-        brandValue,
-        foundBrand,
-        brandExists: !!foundBrand,
-      });
-      console.log("🔍 Category lookup:", {
-        categoryValue,
-        foundCategory,
-        categoryExists: !!foundCategory,
-      });
 
       const newFormData = {
         category: categoryValue,
@@ -298,7 +212,6 @@ const EditProduct = () => {
       };
       setFormData(newFormData);
 
-      console.log("🔍 Product image:", product.image);
       // Set image previews
       if (product.image) {
         setImagePreview(product.image);
@@ -334,14 +247,6 @@ const EditProduct = () => {
           const selectedColor = colors.find(
             (c) => c.id.toString() === attr.color?.toString()
           );
-          console.log(
-            `🔍 Attribute ${index} - Selected size found:`,
-            selectedSize
-          );
-          console.log(
-            `🔍 Attribute ${index} - Selected color found:`,
-            selectedColor
-          );
         });
       }
     }
@@ -352,13 +257,13 @@ const EditProduct = () => {
     // Check if the values match any dropdown options
     if (formData.brand) {
       const brandMatch = brands.find((b) => b.id.toString() === formData.brand);
-      console.log("🔍 Brand match found:", brandMatch);
+      console.log("🔍 brandMatch", brandMatch);
     }
     if (formData.category) {
       const categoryMatch = categories.find(
         (c) => c.id.toString() === formData.category
       );
-      console.log("🔍 Category match found:", categoryMatch);
+      console.log("🔍 categoryMatch", categoryMatch);
     }
   }, [formData, brands, categories]);
 
