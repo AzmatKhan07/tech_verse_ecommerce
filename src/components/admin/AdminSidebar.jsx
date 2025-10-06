@@ -14,6 +14,7 @@ import {
   Ruler,
   Percent,
   Image,
+  Ticket,
 } from "lucide-react";
 import { useAuthUser, useSignOut } from "react-auth-kit";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -90,6 +91,12 @@ const AdminSidebar = ({ isOpen, onClose }) => {
       label: "Taxes",
       icon: Percent,
       path: "/admin/taxes",
+    },
+    {
+      id: "coupons",
+      label: "Coupons",
+      icon: Ticket,
+      path: "/admin/coupons",
     },
     {
       id: "home-banner",

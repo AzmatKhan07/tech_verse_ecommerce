@@ -15,6 +15,7 @@ import { useCurrentUser } from "@/lib/hooks/useCurrentUser";
 import { useStripe, useElements, CardElement } from "@stripe/react-stripe-js";
 import paymentService from "@/lib/api/services/payment";
 import { useToast } from "@/lib/hooks/use-toast";
+import CouponValidator from "./CouponValidator";
 
 /**
  * CheckoutForm Component
@@ -22,7 +23,7 @@ import { useToast } from "@/lib/hooks/use-toast";
  */
 const CheckoutForm = ({ onNext, onBack }) => {
   const user = useCurrentUser();
-  const { cartItems, cartTotal } = useCart();
+  const { cartItems, cartTotal, mrpTotal, discount } = useCart();
   const stripe = useStripe();
   const elements = useElements();
   const { toast } = useToast();
@@ -45,45 +46,28 @@ const CheckoutForm = ({ onNext, onBack }) => {
   const [isProcessing, setIsProcessing] = useState(false);
 
   const [useDifferentBilling, setUseDifferentBilling] = useState(false);
-  const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [shippingMethod, setShippingMethod] = useState("free");
 
   const formatPrice = (amount) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 2,
-    }).format(amount);
+    return `${amount?.toLocaleString()} PKR`;
   };
 
   // Calculate discount from applied coupon
-  const discount = appliedCoupon ? appliedCoupon.amount : 0;
+  const totalDiscount = appliedCoupon ? appliedCoupon.discount : null;
 
   // Calculate shipping cost
   const shippingCost =
-    shippingMethod === "free" ? 0 : shippingMethod === "express" ? 15 : 21;
+    shippingMethod === "free" ? 0 : shippingMethod === "express" ? 500 : 300;
 
   // Calculate totals using cart context
+
   const subtotal = cartTotal;
-  const total = subtotal - discount + shippingCost;
+  const total = subtotal - totalDiscount + shippingCost;
 
-  // Handle coupon application
-  const handleApplyCoupon = () => {
-    if (couponCode.toLowerCase() === "jenkateMW".toLowerCase()) {
-      setAppliedCoupon({
-        code: "JenkateMW",
-        amount: 25.0,
-      });
-    } else {
-      setAppliedCoupon(null);
-    }
-  };
-
-  // Handle coupon removal
-  const handleRemoveCoupon = () => {
-    setAppliedCoupon(null);
-    setCouponCode("");
+  // Handle coupon application from CouponValidator
+  const handleCouponApplied = (couponData) => {
+    setAppliedCoupon(couponData);
   };
 
   const handleSubmit = async (e) => {
@@ -502,19 +486,13 @@ const CheckoutForm = ({ onNext, onBack }) => {
               ))
             )}
 
-            {/* Coupon Input */}
+            {/* Coupon Validator */}
             <div className="pt-4 border-t border-gray-200">
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Coupon Code"
-                  value={couponCode}
-                  onChange={(e) => setCouponCode(e.target.value)}
-                  className="flex-1"
-                />
-                <Button variant="outline" onClick={handleApplyCoupon}>
-                  Apply
-                </Button>
-              </div>
+              <CouponValidator
+                orderAmount={subtotal}
+                onCouponApplied={handleCouponApplied}
+                appliedCoupon={appliedCoupon}
+              />
             </div>
 
             {/* Shipping and Total */}
@@ -524,13 +502,7 @@ const CheckoutForm = ({ onNext, onBack }) => {
                 <div className="flex justify-between text-sm">
                   <span>{appliedCoupon.code}</span>
                   <span className="text-green-600">
-                    -{formatPrice(appliedCoupon.amount)}
-                    <button
-                      onClick={handleRemoveCoupon}
-                      className="ml-2 text-red-500 hover:text-red-700"
-                    >
-                      [Remove]
-                    </button>
+                    -{formatPrice(appliedCoupon.discount)}
                   </span>
                 </div>
               )}
@@ -548,6 +520,14 @@ const CheckoutForm = ({ onNext, onBack }) => {
                 <span>Subtotal</span>
                 <span className="font-medium">{formatPrice(subtotal)}</span>
               </div>
+              {totalDiscount && (
+                <div className="flex justify-between text-sm">
+                  <span>Discount</span>
+                  <span className="font-medium">
+                    {formatPrice(totalDiscount)}
+                  </span>
+                </div>
+              )}
 
               {/* Total */}
               <div className="flex justify-between text-lg font-medium pt-2 border-t border-gray-200">
