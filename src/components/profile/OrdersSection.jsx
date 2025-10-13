@@ -49,11 +49,9 @@ const OrdersSection = () => {
   }
 
   // Handle different API response structures
-  console.log("🔍 Orders API Response:", orders);
   const ordersArray = Array.isArray(orders)
     ? orders
     : orders?.results || orders?.data || [];
-  console.log("🔍 Processed Orders Array:", ordersArray);
 
   return (
     <div className="max-w-4xl">

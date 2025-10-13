@@ -12,11 +12,27 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import OrderStatusBadge from "./OrderStatusBadge";
+import { useOrderStatuses } from "@/lib/query/hooks/useOrderStatuses";
 
 const OrdersTable = ({ orders }) => {
   const [expandedOrders, setExpandedOrders] = useState(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
+  // Fetch order statuses to map status IDs to status strings
+  const { data: orderStatusesData } = useOrderStatuses({
+    page_size: 100, // Get all order statuses
+    ordering: "orders_status",
+  });
+
+  // Get order statuses array
+  const orderStatuses = orderStatusesData?.orderStatuses || [];
+
+  // Function to map status ID to status string
+  const getStatusString = (statusId) => {
+    const statusObj = orderStatuses.find((s) => s.id === statusId);
+    return statusObj ? statusObj.orders_status : "Unknown";
+  };
 
   const formatPrice = (amount) => {
     return new Intl.NumberFormat("en-US", {
@@ -150,7 +166,9 @@ const OrdersTable = ({ orders }) => {
 
                 {/* Status */}
                 <div className="flex items-center">
-                  <OrderStatusBadge status={order.status} />
+                  <OrderStatusBadge
+                    status={getStatusString(order.order_status)}
+                  />
                 </div>
 
                 {/* Total */}

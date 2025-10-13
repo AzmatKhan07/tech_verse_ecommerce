@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -82,14 +82,6 @@ const ShopFilters = ({ onFiltersChange, onClearFilters }) => {
     ];
   const colors = colorsData?.results || colorsData || [];
 
-  // Debug logging for colors
-  console.log("🎨 Colors Debug:", {
-    colorsData,
-    colors,
-    colorsLoading,
-    colorsError,
-    colorsCount: colors.length,
-  });
   const brands = brandsData?.brands ||
     brandsData?.results ||
     brandsData || [
@@ -97,20 +89,6 @@ const ShopFilters = ({ onFiltersChange, onClearFilters }) => {
       { id: 2, name: "Brand B" },
       { id: 3, name: "Brand C" },
     ];
-
-  // Debug logging
-  console.log("=== FILTER DEBUG ===");
-  console.log("Categories data:", categoriesData);
-  console.log("Categories array:", categories);
-  console.log("Categories loading:", categoriesLoading);
-  console.log("Categories error:", categoriesError);
-  console.log("Sizes data:", sizesData);
-  console.log("Sizes array:", sizes);
-  console.log("Colors data:", colorsData);
-  console.log("Colors array:", colors);
-  console.log("Brands data:", brandsData);
-  console.log("Brands array:", brands);
-  console.log("===================");
 
   // Sample product images for color filter (you can replace with actual product images)
   const colorImages = {
@@ -124,67 +102,60 @@ const ShopFilters = ({ onFiltersChange, onClearFilters }) => {
   };
 
   // Handle price range change
-  const handlePriceChange = (value) => {
+  const handlePriceChange = useCallback((value) => {
     setPriceRange(value);
-    updateFilters();
-  };
+  }, []);
 
   // Handle category selection
-  const handleCategoryChange = (categoryValue) => {
+  const handleCategoryChange = useCallback((categoryValue) => {
     setSelectedCategory(categoryValue);
-    updateFilters();
-  };
+  }, []);
 
   // Handle size selection
-  const handleSizeChange = (sizeId, checked) => {
+  const handleSizeChange = useCallback((sizeId, checked) => {
     if (checked) {
-      setSelectedSizes([...selectedSizes, sizeId]);
+      setSelectedSizes((prev) => [...prev, sizeId]);
     } else {
-      setSelectedSizes(selectedSizes.filter((id) => id !== sizeId));
+      setSelectedSizes((prev) => prev.filter((id) => id !== sizeId));
     }
-    updateFilters();
-  };
+  }, []);
 
   // Handle stock status change
-  const handleStockStatusChange = (status, checked) => {
+  const handleStockStatusChange = useCallback((status, checked) => {
     setStockStatus((prev) => ({
       ...prev,
       [status]: checked,
     }));
-    updateFilters();
-  };
+  }, []);
 
   // Handle rating filter change
-  const handleRatingChange = (rating, checked) => {
+  const handleRatingChange = useCallback((rating, checked) => {
     setRatingFilter((prev) => ({
       ...prev,
       [rating]: checked,
     }));
-    updateFilters();
-  };
+  }, []);
 
   // Handle color selection
-  const handleColorChange = (colorId, checked) => {
+  const handleColorChange = useCallback((colorId, checked) => {
     if (checked) {
-      setSelectedColors([...selectedColors, colorId]);
+      setSelectedColors((prev) => [...prev, colorId]);
     } else {
-      setSelectedColors(selectedColors.filter((id) => id !== colorId));
+      setSelectedColors((prev) => prev.filter((id) => id !== colorId));
     }
-    updateFilters();
-  };
+  }, []);
 
   // Handle brand selection
-  const handleBrandChange = (brandId, checked) => {
+  const handleBrandChange = useCallback((brandId, checked) => {
     if (checked) {
-      setSelectedBrands([...selectedBrands, brandId]);
+      setSelectedBrands((prev) => [...prev, brandId]);
     } else {
-      setSelectedBrands(selectedBrands.filter((id) => id !== brandId));
+      setSelectedBrands((prev) => prev.filter((id) => id !== brandId));
     }
-    updateFilters();
-  };
+  }, []);
 
   // Update filters and notify parent
-  const updateFilters = () => {
+  const updateFilters = useCallback(() => {
     const filters = {
       priceRange,
       category: selectedCategory,
@@ -195,10 +166,24 @@ const ShopFilters = ({ onFiltersChange, onClearFilters }) => {
       brands: selectedBrands,
     };
     onFiltersChange?.(filters);
-  };
+  }, [
+    priceRange,
+    selectedCategory,
+    selectedSizes,
+    stockStatus,
+    ratingFilter,
+    selectedColors,
+    selectedBrands,
+    onFiltersChange,
+  ]);
+
+  // Apply filters
+  const handleApplyFilters = useCallback(() => {
+    updateFilters();
+  }, [updateFilters]);
 
   // Clear all filters
-  const handleClearFilters = () => {
+  const handleClearFilters = useCallback(() => {
     setPriceRange([2, 90]);
     setSelectedCategory("all");
     setSelectedSizes([]);
@@ -216,17 +201,21 @@ const ShopFilters = ({ onFiltersChange, onClearFilters }) => {
     });
     setSelectedColors([]);
     setSelectedBrands([]);
+    // Apply the cleared filters immediately
+    setTimeout(() => {
+      updateFilters();
+    }, 0);
     onClearFilters?.();
-  };
+  }, [updateFilters, onClearFilters]);
 
   // Mobile filter handlers
-  const handleMobileFiltersToggle = () => {
-    setIsMobileFiltersOpen(!isMobileFiltersOpen);
-  };
+  const handleMobileFiltersToggle = useCallback(() => {
+    setIsMobileFiltersOpen((prev) => !prev);
+  }, []);
 
-  const handleMobileFiltersClose = () => {
+  const handleMobileFiltersClose = useCallback(() => {
     setIsMobileFiltersOpen(false);
-  };
+  }, []);
 
   // Filter section component
   const FilterSection = ({ title, children, collapsible = true }) => (
@@ -262,17 +251,12 @@ const ShopFilters = ({ onFiltersChange, onClearFilters }) => {
             max={90}
             min={2}
             step={1}
+            minStepsBetweenThumbs={1}
             className="w-full"
+            defaultValue={[2, 90]}
+            orientation="horizontal"
+            dir="ltr"
           />
-
-          {/* Price Labels */}
-          <div className="flex justify-between text-xs text-gray-500">
-            <span>2</span>
-            <span>24</span>
-            <span>46</span>
-            <span>68</span>
-            <span>90</span>
-          </div>
 
           {/* Manual Price Input */}
           <div className="flex items-center gap-2">
@@ -456,14 +440,20 @@ const ShopFilters = ({ onFiltersChange, onClearFilters }) => {
         </div>
       </FilterSection>
 
-      {/* Clear Button */}
-      <div className="mt-6">
+      {/* Filter Action Buttons */}
+      <div className="mt-6 space-y-2">
+        <Button
+          onClick={handleApplyFilters}
+          className="w-full bg-black text-white hover:bg-gray-800"
+        >
+          Apply Filters
+        </Button>
         <Button
           onClick={handleClearFilters}
           variant="outline"
           className="w-full"
         >
-          Clear
+          Clear All
         </Button>
       </div>
     </div>
