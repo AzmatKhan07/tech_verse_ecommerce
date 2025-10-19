@@ -14,10 +14,8 @@ import {
 import OrderStatusBadge from "./OrderStatusBadge";
 import { useOrderStatuses } from "@/lib/query/hooks/useOrderStatuses";
 
-const OrdersTable = ({ orders }) => {
+const OrdersTable = ({ orders, pagination, currentPage, onPageChange }) => {
   const [expandedOrders, setExpandedOrders] = useState(new Set());
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
 
   // Fetch order statuses to map status IDs to status strings
   const { data: orderStatusesData } = useOrderStatuses({
@@ -74,19 +72,20 @@ const OrdersTable = ({ orders }) => {
   // Ensure orders is an array
   const safeOrders = Array.isArray(orders) ? orders : [];
 
-  // Pagination logic
-  const totalPages = Math.ceil(safeOrders.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedOrders = safeOrders.slice(startIndex, endIndex);
+  // Extract pagination info
+  const totalPages = pagination?.totalPages || 1;
+  const totalCount = pagination?.count || safeOrders.length;
+  const hasNext = pagination?.hasNext || false;
+  const hasPrevious = pagination?.hasPrevious || false;
 
-  // Reset to page 1 when orders change
-  React.useEffect(() => {
-    setCurrentPage(1);
-  }, [orders]);
+  // Debug: Log pagination data
+  console.log("🔍 OrdersTable pagination:", pagination);
+  console.log("🔍 OrdersTable totalPages:", totalPages);
+  console.log("🔍 OrdersTable totalCount:", totalCount);
+  console.log("🔍 OrdersTable currentPage:", currentPage);
 
   const handlePageChange = (page) => {
-    setCurrentPage(page);
+    onPageChange(page);
     // Collapse all expanded orders when changing pages
     setExpandedOrders(new Set());
   };
@@ -122,7 +121,7 @@ const OrdersTable = ({ orders }) => {
 
       {/* Table Body */}
       <div className="divide-y divide-gray-200">
-        {paginatedOrders.map((order) => {
+        {safeOrders.map((order) => {
           const isExpanded = expandedOrders.has(order.id);
           const orderTotal = calculateOrderTotal(order.order_details || []);
           const itemCount = order.order_details?.length || 0;
@@ -264,14 +263,13 @@ const OrdersTable = ({ orders }) => {
         })}
       </div>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="px-6 py-4 border-t border-gray-200">
+      {/* Pagination Info - Always show for debugging */}
+      <div className="px-6 py-4 border-t border-gray-200">
+        {totalPages > 1 && totalCount > 0 ? (
           <div className="flex items-center justify-between">
             <div className="text-sm text-gray-600">
-              Showing {startIndex + 1} to{" "}
-              {Math.min(endIndex, safeOrders.length)} of {safeOrders.length}{" "}
-              orders
+              Showing {(currentPage - 1) * 20 + 1} to{" "}
+              {Math.min(currentPage * 20, totalCount)} of {totalCount} orders
             </div>
             <Pagination>
               <PaginationContent>
@@ -279,7 +277,7 @@ const OrdersTable = ({ orders }) => {
                   <PaginationPrevious
                     onClick={() => handlePageChange(currentPage - 1)}
                     className={
-                      currentPage === 1
+                      !hasPrevious
                         ? "pointer-events-none opacity-50"
                         : "cursor-pointer"
                     }
@@ -328,7 +326,7 @@ const OrdersTable = ({ orders }) => {
                   <PaginationNext
                     onClick={() => handlePageChange(currentPage + 1)}
                     className={
-                      currentPage === totalPages
+                      !hasNext
                         ? "pointer-events-none opacity-50"
                         : "cursor-pointer"
                     }
@@ -337,8 +335,12 @@ const OrdersTable = ({ orders }) => {
               </PaginationContent>
             </Pagination>
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="text-sm text-gray-600">
+            Showing all {totalCount} orders (single page)
+          </div>
+        )}
+      </div>
     </div>
   );
 };

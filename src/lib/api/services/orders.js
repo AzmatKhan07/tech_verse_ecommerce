@@ -5,11 +5,16 @@ class OrdersService {
     this.baseURL = "/v1/orders";
   }
 
-  // Get current user's orders
-  async getMyOrders() {
+  // Get current user's orders with pagination
+  async getMyOrders(params = {}) {
     try {
-      console.log("📦 Fetching user orders...");
-      const response = await apiClient.get(`${this.baseURL}/orders/my-orders/`);
+      console.log("📦 Fetching user orders with params:", params);
+      const response = await apiClient.get(
+        `${this.baseURL}/orders/my-orders/`,
+        {
+          params,
+        }
+      );
       console.log("✅ Orders fetched successfully:", response.status);
       return response.data;
     } catch (error) {

@@ -43,7 +43,7 @@ const AdminSidebar = ({ isOpen, onClose }) => {
       id: "dashboard",
       label: "Dashboard",
       icon: LayoutDashboard,
-      path: "/admin/dashboard",
+      path: "/admin",
     },
     {
       id: "products",

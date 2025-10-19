@@ -50,13 +50,31 @@ const AdminOrders = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [ordering, setOrdering] = useState("-created_at"); // Default: newest first
 
+  // Fetch order statuses for dropdown options
+  const { data: orderStatusesData, isLoading: orderStatusesLoading } =
+    useOrderStatuses({
+      page_size: 100, // Get all order statuses
+      ordering: "orders_status",
+    });
+
+  // Get dynamic order statuses from API
+  const orderStatuses = orderStatusesData?.orderStatuses || [];
+
+  // Map status strings to integers using dynamic order statuses
+  const getStatusId = (status) => {
+    const statusObj = orderStatuses.find((s) => s.orders_status === status);
+    return statusObj ? statusObj.id : 0;
+  };
+
   // Build query parameters
   const queryParams = {
     page: currentPage,
     page_size: 20,
     ordering: ordering,
     ...(searchTerm && { search: searchTerm }),
-    ...(filterStatus !== "All" && { order_status: filterStatus }),
+    ...(filterStatus !== "All" && {
+      order_status: getStatusId(filterStatus),
+    }),
     ...(filterPaymentStatus !== "All" && {
       payment_status: filterPaymentStatus,
     }),
@@ -71,19 +89,27 @@ const AdminOrders = () => {
     refetch,
   } = useAdminOrders(queryParams);
 
+  // Fetch all orders for state cards (without pagination)
+  const { data: allOrdersData } = useAdminOrders({
+    page: 1,
+    page_size: 1000, // Get a large number to get all orders
+    ordering: ordering,
+    ...(searchTerm && { search: searchTerm }),
+    ...(filterStatus !== "All" && {
+      order_status: getStatusId(filterStatus),
+    }),
+    ...(filterPaymentStatus !== "All" && {
+      payment_status: filterPaymentStatus,
+    }),
+    ...(filterPaymentType !== "All" && { payment_type: filterPaymentType }),
+  });
+
   // Reset to page 1 if we get a 404 error (invalid page)
   useEffect(() => {
     if (error && error.message.includes("404") && currentPage > 1) {
       setCurrentPage(1);
     }
   }, [error, currentPage]);
-
-  // Fetch order statuses for dropdown options
-  const { data: orderStatusesData, isLoading: orderStatusesLoading } =
-    useOrderStatuses({
-      page_size: 100, // Get all order statuses
-      ordering: "orders_status",
-    });
 
   // Update order status mutation
   const updateOrderStatusMutation = useUpdateOrderStatus();
@@ -93,6 +119,9 @@ const AdminOrders = () => {
   const count = ordersData?.count || 0;
   const pageSize = queryParams.page_size;
   const totalPages = Math.max(1, Math.ceil(count / pageSize));
+
+  // Get all orders for state cards
+  const allOrders = allOrdersData?.results || [];
 
   const formatPrice = (amount) => {
     return new Intl.NumberFormat("en-US", {
@@ -134,18 +163,10 @@ const AdminOrders = () => {
     }
   };
 
-  // Get dynamic order statuses from API
-  const orderStatuses = orderStatusesData?.orderStatuses || [];
   const statusOptions = orderStatuses.map((status) => status.orders_status);
 
   const paymentStatusOptions = ["Pending", "Success", "Failed"];
   const paymentTypeOptions = ["COD", "Gateway"];
-
-  // Map status strings to integers using dynamic order statuses
-  const getStatusId = (status) => {
-    const statusObj = orderStatuses.find((s) => s.orders_status === status);
-    return statusObj ? statusObj.id : 0;
-  };
 
   // Map status integers to strings for display using dynamic order statuses
   const getStatusString = (statusId) => {
@@ -215,9 +236,99 @@ const AdminOrders = () => {
           </Button>
         </div>
 
+        {/* Error Message */}
+        {error && (
+          <Card className="border-red-200 bg-red-50">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 text-red-700">
+                <AlertCircle className="w-5 h-5" />
+                <span>
+                  {error.message || "Failed to fetch orders. Please try again."}
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => refetch()}
+                  className="ml-auto"
+                >
+                  Retry
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Order Stats */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <ShoppingCart className="w-5 h-5 text-blue-500" />
+                <div>
+                  <p className="text-sm text-gray-600">Total Orders</p>
+                  <p className="text-xl font-bold">
+                    {isLoading ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      count
+                    )}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Dynamic status cards - show first 3 order statuses */}
+          {orderStatuses.slice(0, 3).map((status, index) => {
+            const colors = ["bg-orange-500", "bg-yellow-500", "bg-green-500"];
+            const color = colors[index] || "bg-gray-500";
+
+            return (
+              <Card key={status.id}>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-5 h-5 ${color} rounded-full`}></div>
+                    <div>
+                      <p className="text-sm text-gray-600">
+                        {status.orders_status}
+                      </p>
+                      <p className="text-xl font-bold">
+                        {
+                          allOrders.filter(
+                            (o) =>
+                              getStatusString(o.order_status) ===
+                              status.orders_status
+                          ).length
+                        }
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+
         {/* Filters */}
         <Card>
           <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-gray-900">Filters</h3>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSearchTerm("");
+                  setFilterStatus("All");
+                  setFilterPaymentStatus("All");
+                  setFilterPaymentType("All");
+                  setCurrentPage(1);
+                }}
+                className="text-xs"
+              >
+                Clear All Filters
+              </Button>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
               {/* Search */}
               <div className="relative lg:col-span-2">
@@ -278,81 +389,6 @@ const AdminOrders = () => {
             </div>
           </CardContent>
         </Card>
-
-        {/* Error Message */}
-        {error && (
-          <Card className="border-red-200 bg-red-50">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 text-red-700">
-                <AlertCircle className="w-5 h-5" />
-                <span>
-                  {error.message || "Failed to fetch orders. Please try again."}
-                </span>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => refetch()}
-                  className="ml-auto"
-                >
-                  Retry
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Order Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <ShoppingCart className="w-5 h-5 text-blue-500" />
-                <div>
-                  <p className="text-sm text-gray-600">Total Orders</p>
-                  <p className="text-xl font-bold">
-                    {isLoading ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : (
-                      count
-                    )}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Dynamic status cards - show first 3 order statuses */}
-          {orderStatuses.slice(0, 3).map((status, index) => {
-            const colors = ["bg-orange-500", "bg-yellow-500", "bg-green-500"];
-            const color = colors[index] || "bg-gray-500";
-
-            return (
-              <Card key={status.id}>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-5 h-5 ${color} rounded-full`}></div>
-                    <div>
-                      <p className="text-sm text-gray-600">
-                        {status.orders_status}
-                      </p>
-                      <p className="text-xl font-bold">
-                        {isLoading ? (
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                        ) : (
-                          orders.filter(
-                            (o) =>
-                              getStatusString(o.order_status) ===
-                              status.orders_status
-                          ).length
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
 
         {/* Orders Table */}
         <Card>
@@ -500,84 +536,80 @@ const AdminOrders = () => {
                     No orders found matching your criteria.
                   </div>
                 )}
+
+                {/* pagination */}
+
+                <div className="flex items-center justify-between mt-6">
+                  <div className="text-sm text-gray-600">
+                    Showing {(currentPage - 1) * pageSize + 1} to{" "}
+                    {Math.min(currentPage * pageSize, count)} of {count} orders
+                  </div>
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious
+                          onClick={() => setCurrentPage(currentPage - 1)}
+                          className={
+                            currentPage === 1 || isLoading
+                              ? "pointer-events-none opacity-50"
+                              : "cursor-pointer"
+                          }
+                        />
+                      </PaginationItem>
+
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                        (page) => {
+                          const shouldShow =
+                            page === 1 ||
+                            page === totalPages ||
+                            (page >= currentPage - 1 &&
+                              page <= currentPage + 1);
+
+                          if (!shouldShow) {
+                            if (
+                              page === currentPage - 2 ||
+                              page === currentPage + 2
+                            ) {
+                              return (
+                                <PaginationItem key={page}>
+                                  <PaginationEllipsis />
+                                </PaginationItem>
+                              );
+                            }
+                            return null;
+                          }
+
+                          return (
+                            <PaginationItem key={page}>
+                              <PaginationLink
+                                onClick={() => setCurrentPage(page)}
+                                isActive={currentPage === page}
+                                className="cursor-pointer"
+                              >
+                                {page}
+                              </PaginationLink>
+                            </PaginationItem>
+                          );
+                        }
+                      )}
+
+                      <PaginationItem>
+                        <PaginationNext
+                          onClick={() => setCurrentPage(currentPage + 1)}
+                          className={
+                            currentPage === totalPages || isLoading
+                              ? "pointer-events-none opacity-50"
+                              : "cursor-pointer"
+                          }
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                </div>
               </div>
             )}
           </CardContent>
         </Card>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-gray-600">
-                  Showing {(currentPage - 1) * pageSize + 1} to{" "}
-                  {Math.min(currentPage * pageSize, count)} of {count} orders
-                </div>
-                <Pagination>
-                  <PaginationContent>
-                    <PaginationItem>
-                      <PaginationPrevious
-                        onClick={() => setCurrentPage(currentPage - 1)}
-                        className={
-                          currentPage === 1 || isLoading
-                            ? "pointer-events-none opacity-50"
-                            : "cursor-pointer"
-                        }
-                      />
-                    </PaginationItem>
-
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                      (page) => {
-                        const shouldShow =
-                          page === 1 ||
-                          page === totalPages ||
-                          (page >= currentPage - 1 && page <= currentPage + 1);
-
-                        if (!shouldShow) {
-                          if (
-                            page === currentPage - 2 ||
-                            page === currentPage + 2
-                          ) {
-                            return (
-                              <PaginationItem key={page}>
-                                <PaginationEllipsis />
-                              </PaginationItem>
-                            );
-                          }
-                          return null;
-                        }
-
-                        return (
-                          <PaginationItem key={page}>
-                            <PaginationLink
-                              onClick={() => setCurrentPage(page)}
-                              isActive={currentPage === page}
-                              className="cursor-pointer"
-                            >
-                              {page}
-                            </PaginationLink>
-                          </PaginationItem>
-                        );
-                      }
-                    )}
-
-                    <PaginationItem>
-                      <PaginationNext
-                        onClick={() => setCurrentPage(currentPage + 1)}
-                        className={
-                          currentPage === totalPages || isLoading
-                            ? "pointer-events-none opacity-50"
-                            : "cursor-pointer"
-                        }
-                      />
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </div>
     </AdminLayout>
   );

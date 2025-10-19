@@ -1,11 +1,22 @@
-import React from "react";
+import React, { useState } from "react";
 import { useOrders } from "@/lib/query/hooks/useOrders";
 import OrdersTable from "./OrdersTable";
 import { Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const OrdersSection = () => {
-  const { data: orders, isLoading, error, refetch } = useOrders();
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 20;
+
+  const {
+    data: ordersData,
+    isLoading,
+    error,
+    refetch,
+  } = useOrders({
+    page: currentPage,
+    page_size: pageSize,
+  });
 
   if (isLoading) {
     return (
@@ -49,16 +60,50 @@ const OrdersSection = () => {
   }
 
   // Handle different API response structures
-  const ordersArray = Array.isArray(orders)
-    ? orders
-    : orders?.results || orders?.data || [];
+  const orders = ordersData?.results || ordersData?.data || ordersData || [];
+
+  // Debug: Log the API response to see the structure
+  console.log("🔍 Orders API Response:", ordersData);
+  console.log("🔍 Orders count:", ordersData?.count);
+  console.log("🔍 Orders next:", ordersData?.next);
+  console.log("🔍 Orders previous:", ordersData?.previous);
+
+  // Extract pagination info from API response
+  const totalCount = ordersData?.count || 0;
+  const hasNext = !!ordersData?.next;
+  const hasPrevious = !!ordersData?.previous;
+  const totalPages = Math.ceil(totalCount / pageSize);
+
+  console.log("🔍 Calculated pagination:", {
+    totalCount,
+    hasNext,
+    hasPrevious,
+    totalPages,
+  });
+
+  const pagination = {
+    count: totalCount,
+    totalPages: totalPages,
+    currentPage: currentPage,
+    hasNext: hasNext,
+    hasPrevious: hasPrevious,
+  };
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
 
   return (
     <div className="max-w-4xl">
       <h2 className="text-2xl font-semibold text-gray-900 mb-6">
         Orders History
       </h2>
-      <OrdersTable orders={ordersArray} />
+      <OrdersTable
+        orders={orders}
+        pagination={pagination}
+        currentPage={currentPage}
+        onPageChange={handlePageChange}
+      />
     </div>
   );
 };

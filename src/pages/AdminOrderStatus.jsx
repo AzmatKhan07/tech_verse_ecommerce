@@ -20,6 +20,7 @@ import {
   useUpdateOrderStatus,
   useDeleteOrderStatus,
 } from "@/lib/query/hooks/useOrderStatuses";
+import { useAdminOrders } from "@/lib/query/hooks/useOrders";
 import {
   Plus,
   Search,
@@ -57,6 +58,12 @@ const AdminOrderStatus = () => {
   const updateOrderStatusMutation = useUpdateOrderStatus();
   const deleteOrderStatusMutation = useDeleteOrderStatus();
 
+  // Fetch all orders for statistics
+  const { data: allOrdersData } = useAdminOrders({
+    page: 1,
+    page_size: 1000, // Get all orders for statistics
+  });
+
   // Filter order statuses based on search
   const filteredOrderStatuses =
     orderStatusesData?.orderStatuses?.filter((orderStatus) => {
@@ -66,8 +73,46 @@ const AdminOrderStatus = () => {
         .includes(searchTerm.toLowerCase());
     }) || [];
 
-  // Statistics
-  const totalOrderStatuses = orderStatusesData?.count || 0;
+  // Get all orders for statistics
+  const allOrders = allOrdersData?.results || [];
+
+  // Helper function to get status string from ID
+  const getStatusString = (statusId) => {
+    const statusObj = orderStatusesData?.orderStatuses?.find(
+      (s) => s.id === statusId
+    );
+    return statusObj ? statusObj.orders_status : "Unknown";
+  };
+
+  // Dynamic Statistics
+  const totalOrderStatuses =
+    orderStatusesData?.pagination?.count ||
+    orderStatusesData?.orderStatuses?.length ||
+    0;
+  const totalOrders = allOrdersData?.count || 0;
+
+  // Count orders by status
+  const ordersByStatus =
+    orderStatusesData?.orderStatuses?.map((status) => ({
+      status: status.orders_status,
+      count: allOrders.filter((order) => order.order_status === status.id)
+        .length,
+    })) || [];
+
+  // Find most used status
+  const mostUsedStatus = ordersByStatus.reduce(
+    (max, current) => (current.count > max.count ? current : max),
+    { status: "None", count: 0 }
+  );
+
+  // Count recently added statuses (last 30 days)
+  const recentlyAdded =
+    orderStatusesData?.orderStatuses?.filter((status) => {
+      const createdDate = new Date(status.created_at);
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      return createdDate > thirtyDaysAgo;
+    }).length || 0;
 
   const handleCreateOrderStatus = () => {
     setEditingOrderStatus(null);
@@ -176,7 +221,7 @@ const AdminOrderStatus = () => {
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center">
@@ -202,9 +247,11 @@ const AdminOrderStatus = () => {
                   <Activity className="h-6 w-6 text-green-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Available</p>
+                  <p className="text-sm font-medium text-gray-600">
+                    Total Orders
+                  </p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {totalOrderStatuses}
+                    {totalOrders}
                   </p>
                 </div>
               </div>
@@ -218,27 +265,12 @@ const AdminOrderStatus = () => {
                   <Package className="h-6 w-6 text-purple-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">In Use</p>
+                  <p className="text-sm font-medium text-gray-600">Most Used</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {totalOrderStatuses}
+                    {mostUsedStatus.count}
                   </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-orange-100 rounded-lg">
-                  <Clock className="h-6 w-6 text-orange-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">
-                    Recently Added
-                  </p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {filteredOrderStatuses.length}
+                  <p className="text-xs text-gray-500">
+                    {mostUsedStatus.status}
                   </p>
                 </div>
               </div>

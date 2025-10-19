@@ -44,7 +44,7 @@ function App() {
 
             {/* Admin routes without navbar/footer - Protected for admin users only */}
             <Route
-              path="/admin/dashboard"
+              path="/admin"
               element={
                 <ProtectedRoute allowedRoles={["admin", "super_admin"]}>
                   <Dashboard />
